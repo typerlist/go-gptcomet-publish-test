@@ -1,4 +1,4 @@
-module github.com/belingud/gptcomet
+module github.com/belingud/go-gptcomet
 
 go 1.21
 

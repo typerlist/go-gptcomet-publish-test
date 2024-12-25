@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/belingud/gptcomet/cmd"
-	"github.com/belingud/gptcomet/internal/debug"
+	"github.com/belingud/go-gptcomet/cmd"
+	"github.com/belingud/go-gptcomet/internal/debug"
 
 	"github.com/spf13/cobra"
 )

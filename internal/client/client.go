@@ -13,9 +13,9 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"github.com/belingud/gptcomet/internal/config"
-	"github.com/belingud/gptcomet/internal/debug"
-	"github.com/belingud/gptcomet/pkg/types"
+	"github.com/belingud/go-gptcomet/internal/config"
+	"github.com/belingud/go-gptcomet/internal/debug"
+	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
 // Client represents an LLM client

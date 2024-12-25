@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/belingud/gptcomet/internal/config"
-	"github.com/belingud/gptcomet/internal/debug"
+	"github.com/belingud/go-gptcomet/internal/config"
+	"github.com/belingud/go-gptcomet/internal/debug"
 
 	"github.com/spf13/cobra"
 )

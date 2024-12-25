@@ -8,8 +8,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/belingud/gptcomet/internal/config"
-	"github.com/belingud/gptcomet/internal/debug"
+	"github.com/belingud/go-gptcomet/internal/config"
+	"github.com/belingud/go-gptcomet/internal/debug"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
