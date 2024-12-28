@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/belingud/go-gptcomet/cmd"
@@ -34,7 +33,7 @@ func main() {
 	rootCmd.AddCommand(cmd.NewConfigCmd())
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		// fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

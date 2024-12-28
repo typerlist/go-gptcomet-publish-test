@@ -65,7 +65,7 @@ func (m *Manager) GetClientConfig() (*types.ClientConfig, error) {
 	}
 
 	apiKey, ok := providerConfig["api_key"].(string)
-	if !ok {
+	if !ok || apiKey == "" {
 		return nil, fmt.Errorf("api_key not found for provider: %s", provider)
 	}
 
@@ -387,7 +387,7 @@ func defaultConfig() map[string]interface{} {
 		"anthropic": map[string]interface{}{
 			"api_base":          "https://api.anthropic.com",
 			"api_key":           "",
-			"model":             "claude-2",
+			"model":             "claude-3.5-sonnet",
 			"retries":           2,
 			"proxy":             "",
 			"max_tokens":        2048,

@@ -156,7 +156,7 @@ func NewCommitCmd() *cobra.Command {
 			// Get client config
 			clientConfig, err := cfgManager.GetClientConfig()
 			if err != nil {
-				return fmt.Errorf("failed to get client config: %w", err)
+				return err
 			}
 
 			// Create client
