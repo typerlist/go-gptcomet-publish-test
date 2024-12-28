@@ -110,8 +110,8 @@ func formatCommitMessage(msg string) string {
 func NewCommitCmd() *cobra.Command {
 	var (
 		repoPath string
-		rich      bool
-		dryRun    bool
+		rich     bool
+		dryRun   bool
 	)
 
 	cmd := &cobra.Command{
@@ -221,10 +221,24 @@ func NewCommitCmd() *cobra.Command {
 				switch answer {
 				case "y", "yes":
 					// Create commit
-					if err := git.CreateCommit(repoPath, commitMsg); err != nil {
+					err = git.CreateCommit(repoPath, commitMsg)
+					if err != nil {
 						return fmt.Errorf("failed to create commit: %w", err)
 					}
-					fmt.Printf("\nSuccessfully created commit with message:\n%s\n", formatCommitMessage(commitMsg))
+
+					// Get commit hash
+					commitHash, err := git.GetLastCommitHash(repoPath)
+					if err != nil {
+						return fmt.Errorf("failed to get commit hash: %w", err)
+					}
+
+					// Get commit info
+					commitInfo, err := git.GetCommitInfo(repoPath, commitHash)
+					if err != nil {
+						return fmt.Errorf("failed to get commit info: %w", err)
+					}
+
+					fmt.Printf("\nSuccessfully created commit:\n%s\n", commitInfo)
 					return nil
 				case "n", "no":
 					fmt.Println("Operation cancelled")

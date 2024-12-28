@@ -147,9 +147,19 @@ func GetCurrentBranch(repoPath string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
-// GetCommitInfo returns formatted information about the last commit
-func GetCommitInfo(repoPath string) (string, error) {
-	cmd := exec.Command("git", "log", "-1", "--stat", "--pretty=format:Author: %an <%ae>%n%D(%H)%n%n%s%n")
+// GetCommitInfo returns formatted information about the commit
+// If commitHash is empty, returns info about the last commit
+func GetCommitInfo(repoPath string, commitHash string) (string, error) {
+	if commitHash == "" {
+		// Get last commit hash
+		hash, err := GetLastCommitHash(repoPath)
+		if err != nil {
+			return "", err
+		}
+		commitHash = hash
+	}
+
+	cmd := exec.Command("git", "log", "-1", "--stat", commitHash, "--pretty=format:Author: %an <%ae>%n%D(%H)%n%n%s%n")
 	cmd.Dir = repoPath
 
 	var out bytes.Buffer
@@ -176,6 +186,17 @@ func GetCommitInfo(repoPath string) (string, error) {
 	}
 
 	return output, nil
+}
+
+// GetLastCommitHash returns the hash of the last commit
+func GetLastCommitHash(repoPath string) (string, error) {
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = repoPath
+	output, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("failed to get last commit hash: %w", err)
+	}
+	return strings.TrimSpace(string(output)), nil
 }
 
 // CreateCommit creates a git commit with the given message
