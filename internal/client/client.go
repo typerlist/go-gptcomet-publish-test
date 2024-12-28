@@ -1,141 +1,150 @@
 package client
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
+	"crypto/tls"
+	"encoding/base64"
 	"fmt"
-	"io"
+	"net"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 	"time"
 
-	"github.com/tidwall/gjson"
+	"golang.org/x/net/proxy"
 
-	"github.com/belingud/go-gptcomet/internal/config"
 	"github.com/belingud/go-gptcomet/internal/debug"
+	"github.com/belingud/go-gptcomet/internal/llm"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
 // Client represents an LLM client
 type Client struct {
 	config *types.ClientConfig
+	llm    llm.LLM
 }
 
-// New creates a new LLM client
+// New creates a new client with the given config
 func New(config *types.ClientConfig) *Client {
+	var provider llm.LLM
+	switch config.Provider {
+	case "openai":
+		provider = llm.NewOpenAILLM(config)
+	case "claude":
+		provider = llm.NewClaudeLLM(config)
+	case "gemini":
+		provider = llm.NewGeminiLLM(config)
+	case "mistral":
+		provider = llm.NewMistralLLM(config)
+	case "xai":
+		provider = llm.NewXAILLM(config)
+	case "cohere":
+		provider = llm.NewCohereLLM(config)
+	case "tongyi":
+		provider = llm.NewTongyiLLM(config)
+	case "deepseek":
+		provider = llm.NewDeepSeekLLM(config)
+	case "chatglm":
+		provider = llm.NewChatGLMLLM(config)
+	case "azure":
+		provider = llm.NewAzureLLM(config)
+	case "vertex":
+		provider = llm.NewVertexLLM(config)
+	case "kimi":
+		provider = llm.NewKimiLLM(config)
+	case "ollama":
+		provider = llm.NewOllamaLLM(config)
+	case "silicon":
+		provider = llm.NewSiliconLLM(config)
+	case "sambanova":
+		provider = llm.NewSambanovaLLM(config)
+	default:
+		// Default to OpenAI if provider is not specified
+		provider = llm.NewOpenAILLM(config)
+	}
+
 	return &Client{
 		config: config,
+		llm:    provider,
 	}
 }
 
 // RawChat sends a chat completion request and returns the raw JSON response
 func (c *Client) RawChat(messages []types.Message) (string, error) {
-	debug.Printf("Discovered model `%s` with provider `%s`.", c.config.Model, c.config.Provider)
-
-	req := &types.CompletionRequest{
+	return c.sendRawRequest(&types.CompletionRequest{
 		Model:    c.config.Model,
 		Messages: messages,
-	}
-
-	var jsonStr string
-	var err error
-
-	for i := 1; i <= c.config.Retries; i++ {
-		jsonStr, err = c.sendRawRequest(req)
-		if err == nil {
-			break
-		}
-		fmt.Printf(" Retrying (%d/%d) in %d seconds...\n", i, c.config.Retries, i)
-		time.Sleep(time.Duration(i) * time.Second)
-	}
-
-	if err != nil {
-		return "", fmt.Errorf("failed after %d retries: %w", c.config.Retries, err)
-	}
-
-	if jsonStr == "" {
-		return "", fmt.Errorf("empty response")
-	}
-
-	return jsonStr, nil
+	})
 }
 
-// Chat sends a chat completion request and returns the processed response
-func (c *Client) Chat(messages []types.Message) (*types.CompletionResponse, error) {
-	jsonStr, err := c.RawChat(messages)
+// Chat sends a chat message to the LLM provider
+func (c *Client) Chat(ctx context.Context, message string, history []types.Message) (*types.CompletionResponse, error) {
+	client, err := c.getClient()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get client: %w", err)
 	}
 
-	var result types.CompletionResponse
-	if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
+	content, err := c.llm.MakeRequest(ctx, client, message, history)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
 	}
 
-	return &result, nil
+	return &types.CompletionResponse{
+		Content: content,
+		Raw:     make(map[string]interface{}),
+	}, nil
 }
 
 // sendRawRequest sends a completion request to the LLM provider and returns the raw JSON response
 func (c *Client) sendRawRequest(req *types.CompletionRequest) (string, error) {
-	// Set provider-specific parameters
-	if c.config.MaxTokens > 0 {
-		req.MaxTokens = &c.config.MaxTokens
-	}
-	if c.config.Temperature > 0 {
-		req.Temperature = &c.config.Temperature
-	}
-	if c.config.TopP > 0 {
-		req.TopP = &c.config.TopP
-	}
-	if c.config.FrequencyPenalty > 0 {
-		req.FrequencyPenalty = &c.config.FrequencyPenalty
-	}
-
-	// Marshal the request
-	reqBody, err := json.Marshal(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	// Build the request URL
-	u, err := url.Parse(c.config.APIBase)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse API base: %w", err)
-	}
-	u.Path = path.Join(u.Path, c.config.CompletionPath)
-
-	// Create the HTTP request
-	httpReq, err := http.NewRequest("POST", u.String(), bytes.NewReader(reqBody))
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	// Set headers
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", c.config.APIKey))
-
-	// Add any extra headers
-	if c.config.ExtraHeaders != nil {
-		for k, v := range c.config.ExtraHeaders {
-			httpReq.Header.Set(k, v)
-		}
-	}
-
 	// Create a transport with proxy if configured
 	transport := &http.Transport{
 		MaxIdleConns:       100,
 		IdleConnTimeout:    90 * time.Second,
 		DisableCompression: true,
+		TLSClientConfig:    &tls.Config{InsecureSkipVerify: false}, // 默认验证证书
 	}
 
 	if c.config.Proxy != "" {
+		debug.Printf("Using proxy: %s", c.config.Proxy)
 		proxyURL, err := url.Parse(c.config.Proxy)
 		if err != nil {
 			return "", fmt.Errorf("failed to parse proxy URL: %w", err)
 		}
-		transport.Proxy = http.ProxyURL(proxyURL)
+
+		// 根据代理类型设置不同的配置
+		switch proxyURL.Scheme {
+		case "http", "https":
+			transport.Proxy = http.ProxyURL(proxyURL)
+			debug.Printf("Using HTTP/HTTPS proxy: %s", proxyURL.String())
+		case "socks5":
+			auth := &proxy.Auth{}
+			if proxyURL.User != nil {
+				auth.User = proxyURL.User.Username()
+				if password, ok := proxyURL.User.Password(); ok {
+					auth.Password = password
+				}
+			}
+			dialer, err := proxy.SOCKS5("tcp", proxyURL.Host, auth, proxy.Direct)
+			if err != nil {
+				return "", fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
+			}
+			transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			}
+			debug.Printf("Using SOCKS5 proxy: %s", proxyURL.String())
+		default:
+			return "", fmt.Errorf("unsupported proxy scheme: %s", proxyURL.Scheme)
+		}
+
+		// 如果代理有认证信息，添加 Proxy-Authorization 头
+		if proxyURL.User != nil {
+			auth := proxyURL.User.String()
+			basicAuth := base64.StdEncoding.EncodeToString([]byte(auth))
+			headers := c.llm.BuildHeaders()
+			headers["Proxy-Authorization"] = "Basic " + basicAuth
+			debug.Printf("Added proxy authentication")
+		}
 	}
 
 	// Create a client with the configured transport and timeout
@@ -144,83 +153,157 @@ func (c *Client) sendRawRequest(req *types.CompletionRequest) (string, error) {
 		Timeout:   time.Duration(c.config.Timeout) * time.Second,
 	}
 
-	// Send the request
-	debug.Printf("Sending request to %s", u.String())
-	resp, err := client.Do(httpReq)
-	if err != nil {
-		return "", fmt.Errorf("failed to send request: %w", err)
-	}
-	defer resp.Body.Close()
+	// Make the request using the LLM provider
+	return c.llm.MakeRequest(context.Background(), client, req.Messages[len(req.Messages)-1].Content, req.Messages[:len(req.Messages)-1])
+}
 
-	// Read the response
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", fmt.Errorf("failed to read response: %w", err)
+// getDefaultAnswerPath returns the default answer path for the given provider
+func getDefaultAnswerPath(provider string) string {
+	switch provider {
+	case "openai", "tongyi", "deepseek", "chatglm", "azure", "kimi", "silicon", "sambanova":
+		return "choices.0.message.content"
+	case "claude":
+		return "content.0.text"
+	case "gemini":
+		return "candidates.0.content.parts.0.text"
+	case "mistral":
+		return "choices.0.message.content"
+	case "xai":
+		return "choices.0.message.content"
+	case "cohere":
+		return "text"
+	case "vertex":
+		return "predictions.0.candidates.0"
+	case "ollama":
+		return "message.content"
+	default:
+		return "choices.0.message.content"
 	}
-
-	// Check response status
-	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(body))
-	}
-
-	debug.Printf("Response: %s", string(body))
-	return string(body), nil
 }
 
 // getAnswerPath returns the configured answer path or the default value
 func (c *Client) getAnswerPath() string {
-	if c.config.AnswerPath == "" {
-		return "choices.0.message.content"
+	if c.config.AnswerPath != "" {
+		return c.config.AnswerPath
 	}
-	return c.config.AnswerPath
+	return getDefaultAnswerPath(c.config.Provider)
 }
 
 // TranslateMessage translates the given message to the specified language
 func (c *Client) TranslateMessage(prompt string, message string, lang string) (string, error) {
-	fmt.Printf("Translating message into %s: %s\n", lang, message)
-	prompt = strings.Replace(prompt, "{{ placeholder }}", message, 1)
-	prompt = strings.Replace(prompt, "{{ output_language }}", config.OutputLanguageMap[lang], 1)
-	messages := []types.Message{
-		{
-			Role:    "user",
-			Content: prompt,
-		},
-	}
+	// Format the prompt
+	formattedPrompt := fmt.Sprintf(prompt, message, lang)
 
-	jsonStr, err := c.RawChat(messages)
+	// Send the request
+	resp, err := c.Chat(context.Background(), formattedPrompt, nil)
 	if err != nil {
 		return "", err
 	}
 
-	// Use gjson to extract the answer using the configured answer_path
-	result := gjson.Get(jsonStr, c.getAnswerPath())
-	if !result.Exists() {
-		return "", fmt.Errorf("answer path '%s' not found in response", c.getAnswerPath())
-	}
-
-	return result.String(), nil
+	return strings.TrimSpace(resp.Content), nil
 }
 
 // GenerateCommitMessage generates a commit message for the given diff
 func (c *Client) GenerateCommitMessage(diff string, prompt string) (string, error) {
-	prompt = strings.Replace(prompt, "{{ placeholder }}", diff, 1)
-	messages := []types.Message{
-		{
-			Role:    "user",
-			Content: prompt,
-		},
-	}
+	formattedPrompt := fmt.Sprintf(prompt, diff)
 
-	jsonStr, err := c.RawChat(messages)
+	// Send the request
+	resp, err := c.Chat(context.Background(), formattedPrompt, nil)
 	if err != nil {
 		return "", err
 	}
 
-	// Use gjson to extract the answer using the configured answer_path
-	result := gjson.Get(jsonStr, c.getAnswerPath())
-	if !result.Exists() {
-		return "", fmt.Errorf("answer path '%s' not found in response", c.getAnswerPath())
+	return strings.TrimSpace(resp.Content), nil
+}
+
+// GenerateCodeExplanation generates an explanation for the given code in the specified language
+func (c *Client) GenerateCodeExplanation(message, lang string) (string, error) {
+	const prompt = "Explain the following %s code:\n\n%s"
+	formattedPrompt := fmt.Sprintf(prompt, lang, message)
+
+	// Send the request
+	resp, err := c.Chat(context.Background(), formattedPrompt, nil)
+	if err != nil {
+		return "", err
 	}
 
-	return result.String(), nil
+	return strings.TrimSpace(resp.Content), nil
+}
+
+// Stream sends a chat message to the LLM provider and streams the response
+func (c *Client) Stream(ctx context.Context, message string, history []types.Message) (*types.CompletionResponse, error) {
+	client, err := c.getClient()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get client: %w", err)
+	}
+
+	content, err := c.llm.MakeRequest(ctx, client, message, history)
+	if err != nil {
+		return nil, fmt.Errorf("failed to make request: %w", err)
+	}
+
+	return &types.CompletionResponse{
+		Content: content,
+		Raw:     make(map[string]interface{}),
+	}, nil
+}
+
+// getClient returns an HTTP client configured with proxy settings if specified
+func (c *Client) getClient() (*http.Client, error) {
+	// Create a transport with proxy if configured
+	transport := &http.Transport{
+		MaxIdleConns:       100,
+		IdleConnTimeout:    90 * time.Second,
+		DisableCompression: true,
+		TLSClientConfig:    &tls.Config{InsecureSkipVerify: false}, // 默认验证证书
+	}
+
+	if c.config.Proxy != "" {
+		fmt.Printf("Using proxy: %s\n", c.config.Proxy)
+		proxyURL, err := url.Parse(c.config.Proxy)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse proxy URL: %w", err)
+		}
+
+		// 根据代理类型设置不同的配置
+		switch proxyURL.Scheme {
+		case "http", "https":
+			transport.Proxy = http.ProxyURL(proxyURL)
+		case "socks5":
+			auth := &proxy.Auth{}
+			if proxyURL.User != nil {
+				auth.User = proxyURL.User.Username()
+				if password, ok := proxyURL.User.Password(); ok {
+					auth.Password = password
+				}
+			}
+			dialer, err := proxy.SOCKS5("tcp", proxyURL.Host, auth, proxy.Direct)
+			if err != nil {
+				return nil, fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
+			}
+			transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return dialer.Dial(network, addr)
+			}
+			debug.Printf("Using SOCKS5 proxy: %s", proxyURL.String())
+		default:
+			return nil, fmt.Errorf("unsupported proxy scheme: %s", proxyURL.Scheme)
+		}
+
+		// 如果代理有认证信息，添加 Proxy-Authorization 头
+		if proxyURL.User != nil {
+			auth := proxyURL.User.String()
+			basicAuth := base64.StdEncoding.EncodeToString([]byte(auth))
+			headers := c.llm.BuildHeaders()
+			headers["Proxy-Authorization"] = "Basic " + basicAuth
+			debug.Printf("Added proxy authentication")
+		}
+	}
+
+	// Create a client with the configured transport and timeout
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   time.Duration(c.config.Timeout) * time.Second,
+	}
+
+	return client, nil
 }

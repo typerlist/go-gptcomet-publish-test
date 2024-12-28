@@ -16,9 +16,10 @@ func main() {
 	var debugEnabled bool
 
 	var rootCmd = &cobra.Command{
-		Use:     "gptcomet",
-		Short:   "GPTComet - AI-powered Git commit message generator",
-		Version: version,
+		Use:          "gptcomet",
+		Short:        "GPTComet - AI-powered Git commit message generator",
+		Version:      version,
+		SilenceUsage: true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			debug.Enable(debugEnabled)
 			debug.Printf("Debug mode enabled")

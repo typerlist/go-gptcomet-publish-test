@@ -79,11 +79,6 @@ func (m *Manager) GetClientConfig() (*types.ClientConfig, error) {
 		model = m
 	}
 
-	completionPath := "/chat/completions"
-	if path, ok := providerConfig["completion_path"].(string); ok {
-		completionPath = path
-	}
-
 	proxy := ""
 	if p, ok := providerConfig["proxy"].(string); ok {
 		proxy = p
@@ -108,8 +103,9 @@ func (m *Manager) GetClientConfig() (*types.ClientConfig, error) {
 	if m, ok := providerConfig["frequency_penalty"].(float64); ok {
 		frequencyPenalty = m
 	}
+	fmt.Printf("Discovered provider: %s, model: %s\n", provider, model)
 
-	return &types.ClientConfig{
+	clientConfig := &types.ClientConfig{
 		APIBase:          apiBase,
 		APIKey:           apiKey,
 		Model:            model,
@@ -120,8 +116,19 @@ func (m *Manager) GetClientConfig() (*types.ClientConfig, error) {
 		TopP:             topP,
 		Temperature:      temperature,
 		FrequencyPenalty: frequencyPenalty,
-		CompletionPath:   completionPath,
-	}, nil
+	}
+	if m, ok := providerConfig["retries"].(float64); ok {
+		clientConfig.Retries = int(m)
+	}
+
+	if answerPath, ok := providerConfig["answer_path"].(string); ok {
+		clientConfig.AnswerPath = answerPath
+	}
+
+	if completionPath, ok := providerConfig["completion_path"].(string); ok {
+		clientConfig.CompletionPath = completionPath
+	}
+	return clientConfig, nil
 }
 
 // SetProvider sets the provider configuration
@@ -689,4 +696,24 @@ func (m *Manager) List() (string, error) {
 	}
 
 	return string(yamlBytes), nil
+}
+
+// GetFileIgnore returns the file ignore patterns
+func (m *Manager) GetFileIgnore() []string {
+	value, ok := m.Get("file_ignore")
+	if !ok {
+		return nil
+	}
+
+	if patterns, ok := value.([]interface{}); ok {
+		result := make([]string, 0, len(patterns))
+		for _, pattern := range patterns {
+			if str, ok := pattern.(string); ok {
+				result = append(result, str)
+			}
+		}
+		return result
+	}
+
+	return nil
 }

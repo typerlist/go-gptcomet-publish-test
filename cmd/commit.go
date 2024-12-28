@@ -108,8 +108,11 @@ func formatCommitMessage(msg string) string {
 
 // NewCommitCmd creates a new commit command
 func NewCommitCmd() *cobra.Command {
-	var repoPath string
-	var rich bool
+	var (
+		repoPath string
+		rich      bool
+		dryRun    bool
+	)
 
 	cmd := &cobra.Command{
 		Use:   "commit",
@@ -134,18 +137,21 @@ func NewCommitCmd() *cobra.Command {
 			}
 			debug.Println("Found staged changes")
 
-			// Get diff
-			diff, err := git.GetDiff(repoPath)
-			if err != nil {
-				return fmt.Errorf("failed to get diff: %w", err)
-			}
-			debug.Printf("Got diff length: %d", len(diff))
-
 			// Create config manager
 			cfgManager, err := config.New()
 			if err != nil {
 				return fmt.Errorf("failed to create config manager: %w", err)
 			}
+
+			// Get filtered diff
+			diff, err := git.GetStagedDiffFiltered(repoPath, cfgManager)
+			if err != nil {
+				return fmt.Errorf("failed to get diff: %w", err)
+			}
+			if diff == "" {
+				return fmt.Errorf("no staged changes found after filtering")
+			}
+			debug.Printf("Got diff length: %d", len(diff))
 
 			// Get client config
 			clientConfig, err := cfgManager.GetClientConfig()
@@ -174,8 +180,8 @@ func NewCommitCmd() *cobra.Command {
 					if err != nil {
 						return fmt.Errorf("failed to generate commit message: %w", err)
 					}
-
 				}
+
 				// If output.lang is not "en", prompt for translation
 				var lang string
 				langValue, ok := cfgManager.Get(LANGUAGE_KEY)
@@ -194,6 +200,11 @@ func NewCommitCmd() *cobra.Command {
 					}
 				}
 				fmt.Printf("\nGenerated commit message:\n%s\n", formatCommitMessage(commitMsg))
+
+				// If dry-run is set, exit here without committing
+				if dryRun {
+					return nil
+				}
 
 				fmt.Print("\nWould you like to create this commit? ([Y]es/[n]o/[r]etry/[e]dit): ")
 				answer, err := reader.ReadString('\n')
@@ -239,6 +250,7 @@ func NewCommitCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&repoPath, "config", "c", "", "Config path")
 	cmd.Flags().BoolVarP(&rich, "rich", "r", false, "Generate rich commit message with details")
+	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print the generated commit message and exit without committing")
 
 	return cmd
 }

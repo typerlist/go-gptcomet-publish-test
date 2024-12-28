@@ -24,10 +24,14 @@ type CompletionRequest struct {
 	Temperature      *float64  `json:"temperature,omitempty"`
 	TopP             *float64  `json:"top_p,omitempty"`
 	FrequencyPenalty *float64  `json:"frequency_penalty,omitempty"`
+	PresencePenalty  *float64  `json:"presence_penalty,omitempty"`
 }
 
 // CompletionResponse represents a chat completion response
-type CompletionResponse map[string]interface{}
+type CompletionResponse struct {
+	Content string                 `json:"content"`
+	Raw     map[string]interface{} `json:"raw"`
+}
 
 // Choice represents a completion choice
 type Choice struct {
@@ -57,5 +61,7 @@ type ClientConfig struct {
 	TopP             float64           `json:"top_p"`
 	Temperature      float64           `json:"temperature"`
 	FrequencyPenalty float64           `json:"frequency_penalty"`
+	PresencePenalty  float64           `json:"presence_penalty"`
+	AnthropicVersion string            `json:"anthropic_version,omitempty"`
 	Debug            bool              `json:"debug,omitempty"`
 }
