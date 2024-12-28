@@ -147,6 +147,12 @@ func GetCurrentBranch(repoPath string) (string, error) {
 	return strings.TrimSpace(out.String()), nil
 }
 
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+)
+
 // GetCommitInfo returns formatted information about the commit
 // If commitHash is empty, returns info about the last commit
 func GetCommitInfo(repoPath string, commitHash string) (string, error) {
@@ -175,13 +181,27 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 		return "", fmt.Errorf("failed to get branch name: %w", err)
 	}
 
-	// Replace the ref info with just the branch name
+	// Replace the ref info with just the branch name and add colors
 	output := out.String()
 	lines := strings.Split(output, "\n")
 	if len(lines) > 1 {
 		// Replace the second line (which contains ref info) with just the branch name
 		lines[1] = strings.Split(lines[1], "(")[0] + lines[1][strings.LastIndex(lines[1], "("):]
 		lines[1] = branch + lines[1][strings.LastIndex(lines[1], "("):]
+
+		// Add colors to the stats
+		for i := 4; i < len(lines); i++ {
+			line := lines[i]
+			if strings.Contains(line, "|") {
+				parts := strings.Split(line, "|")
+				if len(parts) == 2 {
+					stats := strings.TrimSpace(parts[1])
+					coloredStats := strings.ReplaceAll(stats, "+", colorGreen+"+")
+					coloredStats = strings.ReplaceAll(coloredStats, "-", colorReset+colorRed+"-")
+					lines[i] = parts[0] + "| " + coloredStats + colorReset
+				}
+			}
+		}
 		output = strings.Join(lines, "\n")
 	}
 
