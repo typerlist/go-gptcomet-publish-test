@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 	"github.com/tidwall/gjson"
 )
@@ -20,13 +21,25 @@ func NewVertexLLM(config *types.ClientConfig) *VertexLLM {
 		config.APIBase = "https://us-central1-aiplatform.googleapis.com/v1"
 	}
 	if config.Model == "" {
-		config.Model = "gemini-pro"
+		config.Model = "gemini-1.5-flash"
 	}
+
+	projectID := config.ProjectID
+	if projectID == "" {
+		projectID = "default-project"
+	}
+
+	location := config.Location
+	if location == "" {
+		location = "us-central1"
+	}
+
 	if config.CompletionPath == "" {
-		config.CompletionPath = "models/%s:predict"
+		config.CompletionPath = fmt.Sprintf("projects/%s/locations/%s/publishers/google/models/%s:generateContent",
+			projectID, location, config.Model)
 	}
 	if config.AnswerPath == "" {
-		config.AnswerPath = "predictions.0.candidates.0"
+		config.AnswerPath = "candidates.0.content.parts.0.text"
 	}
 
 	return &VertexLLM{
@@ -35,19 +48,27 @@ func NewVertexLLM(config *types.ClientConfig) *VertexLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (v *VertexLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (v *VertexLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://us-central1-aiplatform.googleapis.com/v1",
-			PromptMessage: "Enter Vertex AI API base",
+			PromptMessage: "Enter Vertex AI API Base URL",
 		},
-		"api_key": {
+		"project_id": {
 			DefaultValue:  "",
-			PromptMessage: "Enter API key",
+			PromptMessage: "Enter Google Cloud project ID",
+		},
+		"location": {
+			DefaultValue:  "us-central1",
+			PromptMessage: "Enter location (e.g., us-central1)",
 		},
 		"model": {
 			DefaultValue:  "gemini-pro",
 			PromptMessage: "Enter model name",
+		},
+		"api_key": {
+			DefaultValue:  "",
+			PromptMessage: "Enter API key",
 		},
 		"max_tokens": {
 			DefaultValue:  "1024",
@@ -63,38 +84,33 @@ func (v *VertexLLM) BuildURL() string {
 
 // FormatMessages formats messages for Vertex AI
 func (v *VertexLLM) FormatMessages(message string, history []types.Message) (interface{}, error) {
-	context := ""
-	examples := []map[string]string{}
-
-	if history != nil {
-		for i := 0; i < len(history); i += 2 {
-			if i+1 < len(history) {
-				examples = append(examples, map[string]string{
-					"input":  history[i].Content,
-					"output": history[i+1].Content,
-				})
-			}
-		}
-	}
-
-	payload := map[string]interface{}{
-		"instances": []map[string]interface{}{
-			{
-				"context":  context,
-				"examples": examples,
-				"messages": []map[string]string{
-					{
-						"author":  "user",
-						"content": message,
-					},
+	contents := []map[string]interface{}{
+		{
+			"role": "user",
+			"parts": []map[string]string{
+				{
+					"text": message,
 				},
 			},
 		},
-		"parameters": map[string]interface{}{
-			"maxOutputTokens": v.Config.MaxTokens,
-			"temperature":     v.Config.Temperature,
-			"topP":            v.Config.TopP,
-		},
+	}
+
+	payload := map[string]interface{}{
+		"contents":          contents,
+		"generation_config": map[string]interface{}{},
+	}
+
+	if v.Config.MaxTokens != 0 {
+		payload["generation_config"].(map[string]interface{})["max_output_tokens"] = v.Config.MaxTokens
+	}
+	if v.Config.Temperature != 0.0 {
+		payload["generation_config"].(map[string]interface{})["temperature"] = v.Config.Temperature
+	}
+	if v.Config.TopP != 0.0 {
+		payload["generation_config"].(map[string]interface{})["top_p"] = v.Config.TopP
+	}
+	if v.Config.TopK != 0.0 {
+		payload["generation_config"].(map[string]interface{})["top_k"] = v.Config.TopK
 	}
 
 	return payload, nil

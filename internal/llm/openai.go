@@ -12,6 +12,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/belingud/go-gptcomet/internal/debug"
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
@@ -41,8 +42,8 @@ func NewOpenAILLM(config *types.ClientConfig) *OpenAILLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (o *OpenAILLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (o *OpenAILLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://api.openai.com/v1",
 			PromptMessage: "Enter OpenAI API base",
@@ -88,16 +89,6 @@ func (o *OpenAILLM) BuildHeaders() map[string]string {
 	return headers
 }
 
-// ParseResponse parses the response from the API
-func (o *OpenAILLM) ParseResponse(response []byte) (string, error) {
-	text := gjson.GetBytes(response, o.Config.AnswerPath).String()
-	if strings.HasPrefix(text, "```") && strings.HasSuffix(text, "```") {
-		text = strings.TrimPrefix(text, "```")
-		text = strings.TrimSuffix(text, "```")
-	}
-	return strings.TrimSpace(text), nil
-}
-
 // GetUsage returns usage information for the provider
 func (o *OpenAILLM) GetUsage(data []byte) (string, error) {
 	usage := gjson.GetBytes(data, "usage")
@@ -106,7 +97,7 @@ func (o *OpenAILLM) GetUsage(data []byte) (string, error) {
 	}
 
 	return fmt.Sprintf(
-		"Token usage: prompt tokens: %d, completion tokens: %d, total tokens: %d",
+		"Token usage> prompt tokens: %d, completion tokens: %d, total tokens: %d",
 		usage.Get("prompt_tokens").Int(),
 		usage.Get("completion_tokens").Int(),
 		usage.Get("total_tokens").Int(),

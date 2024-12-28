@@ -3,6 +3,7 @@ package llm
 import (
 	"fmt"
 
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 	"github.com/tidwall/gjson"
 )
@@ -28,8 +29,8 @@ func NewCohereLLM(config *types.ClientConfig) *CohereLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (c *CohereLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (c *CohereLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://api.cohere.com/v2",
 			PromptMessage: "Enter Cohere API base",

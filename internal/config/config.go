@@ -717,3 +717,25 @@ func (m *Manager) GetFileIgnore() []string {
 
 	return nil
 }
+
+// UpdateProviderConfig updates the configuration for a specific provider
+func (m *Manager) UpdateProviderConfig(provider string, configs map[string]string) error {
+	// Convert string values to interface{}
+	providerConfig := make(map[string]interface{})
+	for k, v := range configs {
+		providerConfig[k] = v
+	}
+
+	// Update the config
+	err := m.Set(provider, providerConfig)
+	if err != nil {
+		return fmt.Errorf("failed to update provider config: %w", err)
+	}
+
+	// Save the config
+	if err := m.save(); err != nil {
+		return fmt.Errorf("failed to save config: %w", err)
+	}
+
+	return nil
+}

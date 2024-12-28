@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
@@ -20,8 +21,8 @@ func NewMistralLLM(config *types.ClientConfig) *MistralLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (m *MistralLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (m *MistralLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://api.mistral.ai/v1",
 			PromptMessage: "Enter Mistral API base",

@@ -9,38 +9,32 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 	"github.com/tidwall/gjson"
 )
 
 // LLM is the interface that all LLM providers must implement
 type LLM interface {
+	// BuildURL builds the API URL
+	BuildURL() string
 	// GetRequiredConfig returns provider-specific configuration requirements
-	GetRequiredConfig() map[string]ConfigRequirement
+	GetRequiredConfig() map[string]config.ConfigRequirement
 
 	// FormatMessages formats messages for the provider's API
 	FormatMessages(message string, history []types.Message) (interface{}, error)
 
-	// BuildURL builds the API URL
-	BuildURL() string
+	// MakeRequest makes a request to the API
+	MakeRequest(ctx context.Context, client *http.Client, message string, history []types.Message) (string, error)
+
+	// GetUsage returns usage information for the provider
+	GetUsage(data []byte) (string, error)
 
 	// BuildHeaders builds request headers
 	BuildHeaders() map[string]string
 
 	// ParseResponse parses the response from the API
 	ParseResponse(response []byte) (string, error)
-
-	// GetUsage returns usage information for the provider
-	GetUsage(data []byte) (string, error)
-
-	// MakeRequest makes a request to the API
-	MakeRequest(ctx context.Context, client *http.Client, message string, history []types.Message) (string, error)
-}
-
-// ConfigRequirement represents a configuration requirement
-type ConfigRequirement struct {
-	DefaultValue  string
-	PromptMessage string
 }
 
 // BaseLLM provides common functionality for all LLM providers
@@ -50,14 +44,24 @@ type BaseLLM struct {
 
 // NewBaseLLM creates a new BaseLLM
 func NewBaseLLM(config *types.ClientConfig) *BaseLLM {
+	if config == nil {
+		config = &types.ClientConfig{}
+	}
+	// Set default values if not provided
+	if config.CompletionPath == "" {
+		config.CompletionPath = "chat/completions"
+	}
+	if config.AnswerPath == "" {
+		config.AnswerPath = "choices.0.message.content"
+	}
 	return &BaseLLM{
 		Config: config,
 	}
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (b *BaseLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (b *BaseLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "",
 			PromptMessage: "Enter API Base URL",
@@ -132,9 +136,14 @@ func (b *BaseLLM) BuildURL() string {
 func (b *BaseLLM) ParseResponse(response []byte) (string, error) {
 	result := gjson.GetBytes(response, b.Config.AnswerPath)
 	if !result.Exists() {
-		return "", fmt.Errorf("failed to find answer in response: %s", string(response))
+		return "", fmt.Errorf("failed to parse response: %s", string(response))
 	}
-	return result.String(), nil
+	text := result.String()
+	if strings.HasPrefix(text, "```") && strings.HasSuffix(text, "```") {
+		text = strings.TrimPrefix(text, "```")
+		text = strings.TrimSuffix(text, "```")
+	}
+	return strings.TrimSpace(text), nil
 }
 
 // GetUsage provides a default implementation for getting usage information
@@ -206,4 +215,31 @@ func (b *BaseLLM) MakeRequest(ctx context.Context, client *http.Client, provider
 	}
 
 	return provider.ParseResponse(respBody)
+}
+
+// DefaultLLM provides a default implementation of LLM interface
+type DefaultLLM struct {
+	*BaseLLM
+}
+
+// NewDefaultLLM creates a new DefaultLLM
+func NewDefaultLLM(config *types.ClientConfig) *DefaultLLM {
+	if config == nil {
+		config = &types.ClientConfig{}
+	}
+	// Set default values if not provided
+	if config.CompletionPath == "" {
+		config.CompletionPath = "chat/completions"
+	}
+	if config.AnswerPath == "" {
+		config.AnswerPath = "choices.0.message.content"
+	}
+	return &DefaultLLM{
+		BaseLLM: NewBaseLLM(config),
+	}
+}
+
+// MakeRequest implements the LLM interface
+func (d *DefaultLLM) MakeRequest(ctx context.Context, client *http.Client, message string, history []types.Message) (string, error) {
+	return d.BaseLLM.MakeRequest(ctx, client, d, message, history)
 }

@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
@@ -24,8 +25,8 @@ func NewDeepSeekLLM(config *types.ClientConfig) *DeepSeekLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (d *DeepSeekLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (d *DeepSeekLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://api.deepseek.com/v1",
 			PromptMessage: "Enter DeepSeek API base",

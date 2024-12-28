@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
@@ -24,8 +25,8 @@ func NewSiliconLLM(config *types.ClientConfig) *SiliconLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (s *SiliconLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (s *SiliconLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://api.silicon.ai/v1",
 			PromptMessage: "Enter Silicon API base",

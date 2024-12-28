@@ -1,6 +1,7 @@
 package llm
 
 import (
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
@@ -15,7 +16,7 @@ func NewChatGLMLLM(config *types.ClientConfig) *ChatGLMLLM {
 		config.APIBase = "https://open.bigmodel.cn/api/paas/v4"
 	}
 	if config.Model == "" {
-		config.Model = "chatglm_turbo"
+		config.Model = "glm-4-flash"
 	}
 
 	return &ChatGLMLLM{
@@ -24,8 +25,8 @@ func NewChatGLMLLM(config *types.ClientConfig) *ChatGLMLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (c *ChatGLMLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (c *ChatGLMLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://open.bigmodel.cn/api/paas/v4",
 			PromptMessage: "Enter ChatGLM API base",
@@ -35,7 +36,7 @@ func (c *ChatGLMLLM) GetRequiredConfig() map[string]ConfigRequirement {
 			PromptMessage: "Enter API key",
 		},
 		"model": {
-			DefaultValue:  "chatglm_turbo",
+			DefaultValue:  "glm-4-flash",
 			PromptMessage: "Enter model name",
 		},
 		"max_tokens": {

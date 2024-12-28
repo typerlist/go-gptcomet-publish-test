@@ -12,6 +12,7 @@ import (
 	"github.com/tidwall/gjson"
 
 	"github.com/belingud/go-gptcomet/internal/debug"
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
@@ -26,7 +27,7 @@ func NewGeminiLLM(config *types.ClientConfig) *GeminiLLM {
 		config.APIBase = "https://generativelanguage.googleapis.com/v1beta/models"
 	}
 	if config.Model == "" {
-		config.Model = "gemini-pro"
+		config.Model = "gemini-1.5-flash"
 	}
 	if config.CompletionPath == "" {
 		config.CompletionPath = "generateContent"
@@ -41,14 +42,14 @@ func NewGeminiLLM(config *types.ClientConfig) *GeminiLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (g *GeminiLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (g *GeminiLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "https://generativelanguage.googleapis.com/v1beta/models",
 			PromptMessage: "Enter Gemini API base",
 		},
 		"model": {
-			DefaultValue:  "gemini-pro",
+			DefaultValue:  "gemini-1.5-flash",
 			PromptMessage: "Enter model name",
 		},
 		"api_key": {
@@ -106,16 +107,6 @@ func (g *GeminiLLM) BuildHeaders() map[string]string {
 	}
 }
 
-// ParseResponse parses the response from the API
-func (g *GeminiLLM) ParseResponse(response []byte) (string, error) {
-	text := gjson.GetBytes(response, g.Config.AnswerPath).String()
-	if strings.HasPrefix(text, "```") && strings.HasSuffix(text, "```") {
-		text = strings.TrimPrefix(text, "```")
-		text = strings.TrimSuffix(text, "```")
-	}
-	return strings.TrimSpace(text), nil
-}
-
 // GetUsage returns usage information for the provider
 func (g *GeminiLLM) GetUsage(data []byte) (string, error) {
 	usage := gjson.GetBytes(data, "usageMetadata")
@@ -143,7 +134,6 @@ func (g *GeminiLLM) MakeRequest(ctx context.Context, client *http.Client, messag
 	debug.Printf("Sending request...")
 
 	reqBody, err := json.Marshal(payload)
-	fmt.Printf("Request Body: %s\n", string(reqBody))
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal request: %w", err)
 	}

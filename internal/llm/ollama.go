@@ -1,13 +1,17 @@
 package llm
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/belingud/go-gptcomet/pkg/types"
 )
 
-// OllamaLLM implements the LLM interface for Ollama
+// OllamaLLM is the Ollama LLM provider implementation
 type OllamaLLM struct {
 	*BaseLLM
 }
@@ -18,10 +22,10 @@ func NewOllamaLLM(config *types.ClientConfig) *OllamaLLM {
 		config.APIBase = "http://localhost:11434/api"
 	}
 	if config.CompletionPath == "" {
-		config.CompletionPath = "chat"
+		config.CompletionPath = "generate"
 	}
 	if config.AnswerPath == "" {
-		config.AnswerPath = "message.content"
+		config.AnswerPath = "response"
 	}
 	if config.Model == "" {
 		config.Model = "llama2"
@@ -33,11 +37,11 @@ func NewOllamaLLM(config *types.ClientConfig) *OllamaLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
-func (o *OllamaLLM) GetRequiredConfig() map[string]ConfigRequirement {
-	return map[string]ConfigRequirement{
+func (o *OllamaLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
+	return map[string]config.ConfigRequirement{
 		"api_base": {
 			DefaultValue:  "http://localhost:11434/api",
-			PromptMessage: "Enter Ollama API base",
+			PromptMessage: "Enter Ollama API Base URL",
 		},
 		"model": {
 			DefaultValue:  "llama2",
@@ -52,26 +56,92 @@ func (o *OllamaLLM) GetRequiredConfig() map[string]ConfigRequirement {
 
 // FormatMessages formats messages for Ollama API
 func (o *OllamaLLM) FormatMessages(message string, history []types.Message) (interface{}, error) {
-	messages := make([]map[string]string, 0, len(history)+1)
-	messages = append(messages, map[string]string{
-		"role":    "user",
-		"content": message,
-	})
-
-	payload := map[string]interface{}{
-		"model":    o.Config.Model,
-		"messages": messages,
-		"options":  map[string]interface{}{},
+	options := map[string]interface{}{
+		"num_predict": o.Config.MaxTokens,
 	}
 
 	if o.Config.Temperature != 0 {
-		payload["options"].(map[string]interface{})["temperature"] = o.Config.Temperature
+		options["temperature"] = o.Config.Temperature
 	}
-	if o.Config.TopP != 0 {
-		payload["options"].(map[string]interface{})["top_p"] = o.Config.TopP
+	if o.Config.TopP != 0.0 {
+		options["top_p"] = o.Config.TopP
+	}
+	if o.Config.TopK != 0.0 {
+		options["top_k"] = o.Config.TopK
+	}
+	if o.Config.RepetitionPenalty != 0.0 {
+		options["repetition_penalty"] = o.Config.RepetitionPenalty
+	}
+	if o.Config.Seed != 0 {
+		options["seed"] = o.Config.Seed
+	}
+	if o.Config.NumGPU != 0 {
+		options["num_gpu"] = o.Config.NumGPU
+	}
+	if o.Config.MainGPU != 0 {
+		options["main_gpu"] = o.Config.MainGPU
+	}
+	if o.Config.FrequencyPenalty != 0.0 {
+		options["frequency_penalty"] = o.Config.FrequencyPenalty
+	}
+	if o.Config.PresencePenalty != 0.0 {
+		options["presence_penalty"] = o.Config.PresencePenalty
+	}
+
+	payload := map[string]interface{}{
+		"model":   o.Config.Model,
+		"prompt":  message,
+		"options": options,
 	}
 
 	return payload, nil
+}
+
+// GetUsage returns usage information for the provider
+func (o *OllamaLLM) GetUsage(data []byte) (string, error) {
+	return "", nil
+}
+
+// MakeRequest makes a request to the API
+func (o *OllamaLLM) MakeRequest(ctx context.Context, client *http.Client, message string, history []types.Message) (string, error) {
+	payload, err := o.FormatMessages(message, history)
+	if err != nil {
+		return "", fmt.Errorf("failed to format messages: %w", err)
+	}
+
+	reqBody, err := json.Marshal(payload)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal request: %w", err)
+	}
+
+	url := fmt.Sprintf("%s/%s", o.Config.APIBase, o.Config.CompletionPath)
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(reqBody))
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	for k, v := range o.BuildHeaders() {
+		req.Header.Set(k, v)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("failed to make request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("request failed with status: %s", resp.Status)
+	}
+
+	var result struct {
+		Response string `json:"response"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		return "", fmt.Errorf("failed to decode response: %w", err)
+	}
+
+	return result.Response, nil
 }
 
 // BuildHeaders builds request headers
@@ -83,15 +153,4 @@ func (o *OllamaLLM) BuildHeaders() map[string]string {
 		headers[k] = v
 	}
 	return headers
-}
-
-// GetUsage returns usage information for the provider
-func (o *OllamaLLM) GetUsage(data []byte) (string, error) {
-	// Ollama doesn't provide token usage information
-	return "", nil
-}
-
-// MakeRequest makes a request to the API
-func (o *OllamaLLM) MakeRequest(ctx context.Context, client *http.Client, message string, history []types.Message) (string, error) {
-	return o.BaseLLM.MakeRequest(ctx, client, o, message, history)
 }
