@@ -3,6 +3,7 @@ package cmd
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/belingud/go-gptcomet/internal/config"
 	"github.com/belingud/go-gptcomet/internal/debug"
@@ -30,19 +31,21 @@ func NewConfigCmd() *cobra.Command {
 				return err
 			}
 
-			value, exists := cfgManager.Get(args[0])
-			if !exists {
-				fmt.Printf("Key '%s' not found in configuration\n", args[0])
-				return nil
+			// Get config value
+			value, ok := cfgManager.Get(args[0])
+			if !ok {
+				return fmt.Errorf("config key not found: %s", args[0])
 			}
-
 			// If the value is a map, check for api_key and mask it
 			if m, ok := value.(map[string]interface{}); ok {
 				config.MaskConfigAPIKeys(m)
 			}
-			// If the value is a string and the key is api_key, mask it
-			if s, ok := value.(string); ok && args[0] == "api_key" {
-				value = config.MaskAPIKey(s, 3)
+
+			// Check if the value is an API key
+			if strings.HasSuffix(args[0], ".api_key") {
+				if strValue, ok := value.(string); ok {
+					value = config.MaskAPIKey(strValue, 4)
+				}
 			}
 
 			data, err := json.MarshalIndent(value, "", "  ")

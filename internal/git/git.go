@@ -11,6 +11,12 @@ import (
 	"github.com/belingud/go-gptcomet/internal/debug"
 )
 
+const (
+	colorReset = "\033[0m"
+	colorRed   = "\033[31m"
+	colorGreen = "\033[32m"
+)
+
 // GetDiff returns the git diff for staged changes
 func GetDiff(repoPath string) (string, error) {
 	cmd := exec.Command("git", "diff", "--staged", "-U2")
@@ -18,6 +24,13 @@ func GetDiff(repoPath string) (string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			if exitError.ExitCode() == 128 {
+				return "", fmt.Errorf("not a git repository (or any of the parent directories): %w", err)
+			} else {
+				return "", fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
+			}
+		}
 		return "", fmt.Errorf("failed to get diff: %w", err)
 	}
 
@@ -46,6 +59,8 @@ func HasStagedChanges(repoPath string) (bool, error) {
 			// Exit code 1 means there are staged changes
 			if exitError.ExitCode() == 1 {
 				return true, nil
+			} else {
+				return false, fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
 			}
 		}
 		return false, fmt.Errorf("failed to check staged changes: %w", err)
@@ -62,6 +77,9 @@ func GetStagedFiles(repoPath string) ([]string, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return nil, fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
+		}
 		return nil, fmt.Errorf("failed to get staged files: %w", err)
 	}
 
@@ -126,6 +144,9 @@ func GetStagedDiffFiltered(repoPath string, cfgManager *config.Manager) (string,
 
 	output, err := cmd.Output()
 	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
+		}
 		return "", fmt.Errorf("failed to get diff: %w", err)
 	}
 
@@ -141,17 +162,14 @@ func GetCurrentBranch(repoPath string) (string, error) {
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w", exitError.ExitCode(), err)
+		}
 		return "", fmt.Errorf("failed to get current branch: %w", err)
 	}
 
 	return strings.TrimSpace(out.String()), nil
 }
-
-const (
-	colorReset  = "\033[0m"
-	colorRed    = "\033[31m"
-	colorGreen  = "\033[32m"
-)
 
 // GetCommitInfo returns formatted information about the commit
 // If commitHash is empty, returns info about the last commit
@@ -172,6 +190,9 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 	cmd.Stdout = &out
 
 	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("git log command failed with exit code %d: %w", exitError.ExitCode(), err)
+		}
 		return "", fmt.Errorf("failed to get commit info: %w", err)
 	}
 
@@ -214,6 +235,9 @@ func GetLastCommitHash(repoPath string) (string, error) {
 	cmd.Dir = repoPath
 	output, err := cmd.Output()
 	if err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w", exitError.ExitCode(), err)
+		}
 		return "", fmt.Errorf("failed to get last commit hash: %w", err)
 	}
 	return strings.TrimSpace(string(output)), nil
@@ -228,6 +252,9 @@ func CreateCommit(repoPath string, message string) error {
 	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
+		if exitError, ok := err.(*exec.ExitError); ok {
+			return fmt.Errorf("git commit command failed with exit code %d: %w", exitError.ExitCode(), err)
+		}
 		return fmt.Errorf("failed to create commit: %s, %w", stderr.String(), err)
 	}
 

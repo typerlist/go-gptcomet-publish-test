@@ -95,24 +95,22 @@ func (c *Client) Chat(ctx context.Context, message string, history []types.Messa
 	}, nil
 }
 
-// sendRawRequest sends a completion request to the LLM provider and returns the raw JSON response
-func (c *Client) sendRawRequest(req *types.CompletionRequest) (string, error) {
-	// Create a transport with proxy if configured
+// createProxyTransport creates an http.Transport with proxy settings based on the configuration
+func (c *Client) createProxyTransport() (*http.Transport, error) {
 	transport := &http.Transport{
 		MaxIdleConns:       100,
 		IdleConnTimeout:    90 * time.Second,
 		DisableCompression: true,
-		TLSClientConfig:    &tls.Config{InsecureSkipVerify: false}, // 默认验证证书
+		TLSClientConfig:    &tls.Config{InsecureSkipVerify: false}, // default verification
 	}
 
 	if c.config.Proxy != "" {
 		debug.Printf("Using proxy: %s", c.config.Proxy)
 		proxyURL, err := url.Parse(c.config.Proxy)
 		if err != nil {
-			return "", fmt.Errorf("failed to parse proxy URL: %w", err)
+			return nil, fmt.Errorf("failed to parse proxy URL: %w", err)
 		}
 
-		// 根据代理类型设置不同的配置
 		switch proxyURL.Scheme {
 		case "http", "https":
 			transport.Proxy = http.ProxyURL(proxyURL)
@@ -127,24 +125,35 @@ func (c *Client) sendRawRequest(req *types.CompletionRequest) (string, error) {
 			}
 			dialer, err := proxy.SOCKS5("tcp", proxyURL.Host, auth, proxy.Direct)
 			if err != nil {
-				return "", fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
+				return nil, fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
 			}
 			transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
 				return dialer.Dial(network, addr)
 			}
 			debug.Printf("Using SOCKS5 proxy: %s", proxyURL.String())
 		default:
-			return "", fmt.Errorf("unsupported proxy scheme: %s", proxyURL.Scheme)
+			return nil, fmt.Errorf("unsupported proxy scheme: %s", proxyURL.Scheme)
 		}
 
-		// 如果代理有认证信息，添加 Proxy-Authorization 头
+		// add proxy authentication
 		if proxyURL.User != nil {
+			transport.ProxyConnectHeader = http.Header{}
 			auth := proxyURL.User.String()
 			basicAuth := base64.StdEncoding.EncodeToString([]byte(auth))
-			headers := c.llm.BuildHeaders()
-			headers["Proxy-Authorization"] = "Basic " + basicAuth
+			transport.ProxyConnectHeader.Add("Proxy-Authorization", "Basic "+basicAuth)
 			debug.Printf("Added proxy authentication")
 		}
+	}
+
+	return transport, nil
+}
+
+// sendRawRequest sends a completion request to the LLM provider and returns the raw JSON response
+func (c *Client) sendRawRequest(req *types.CompletionRequest) (string, error) {
+	// Create a transport with proxy if configured
+	transport, err := c.createProxyTransport()
+	if err != nil {
+		return "", fmt.Errorf("failed to create proxy transport: %w", err)
 	}
 
 	// Create a client with the configured transport and timeout
@@ -157,36 +166,21 @@ func (c *Client) sendRawRequest(req *types.CompletionRequest) (string, error) {
 	return c.llm.MakeRequest(context.Background(), client, req.Messages[len(req.Messages)-1].Content, req.Messages[:len(req.Messages)-1])
 }
 
-// getDefaultAnswerPath returns the default answer path for the given provider
-func getDefaultAnswerPath(provider string) string {
-	switch provider {
-	case "openai", "tongyi", "deepseek", "chatglm", "azure", "kimi", "silicon", "sambanova":
-		return "choices.0.message.content"
-	case "claude":
-		return "content.0.text"
-	case "gemini":
-		return "candidates.0.content.parts.0.text"
-	case "mistral":
-		return "choices.0.message.content"
-	case "xai":
-		return "choices.0.message.content"
-	case "cohere":
-		return "text"
-	case "vertex":
-		return "predictions.0.candidates.0"
-	case "ollama":
-		return "message.content"
-	default:
-		return "choices.0.message.content"
+// getClient returns an HTTP client configured with proxy settings if specified
+func (c *Client) getClient() (*http.Client, error) {
+	// Create a transport with proxy if configured
+	transport, err := c.createProxyTransport()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create proxy transport: %w", err)
 	}
-}
 
-// getAnswerPath returns the configured answer path or the default value
-func (c *Client) getAnswerPath() string {
-	if c.config.AnswerPath != "" {
-		return c.config.AnswerPath
+	// Create a client with the configured transport and timeout
+	client := &http.Client{
+		Transport: transport,
+		Timeout:   time.Duration(c.config.Timeout) * time.Second,
 	}
-	return getDefaultAnswerPath(c.config.Provider)
+
+	return client, nil
 }
 
 // TranslateMessage translates the given message to the specified language
@@ -246,64 +240,4 @@ func (c *Client) Stream(ctx context.Context, message string, history []types.Mes
 		Content: content,
 		Raw:     make(map[string]interface{}),
 	}, nil
-}
-
-// getClient returns an HTTP client configured with proxy settings if specified
-func (c *Client) getClient() (*http.Client, error) {
-	// Create a transport with proxy if configured
-	transport := &http.Transport{
-		MaxIdleConns:       100,
-		IdleConnTimeout:    90 * time.Second,
-		DisableCompression: true,
-		TLSClientConfig:    &tls.Config{InsecureSkipVerify: false}, // 默认验证证书
-	}
-
-	if c.config.Proxy != "" {
-		fmt.Printf("Using proxy: %s\n", c.config.Proxy)
-		proxyURL, err := url.Parse(c.config.Proxy)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse proxy URL: %w", err)
-		}
-
-		// 根据代理类型设置不同的配置
-		switch proxyURL.Scheme {
-		case "http", "https":
-			transport.Proxy = http.ProxyURL(proxyURL)
-		case "socks5":
-			auth := &proxy.Auth{}
-			if proxyURL.User != nil {
-				auth.User = proxyURL.User.Username()
-				if password, ok := proxyURL.User.Password(); ok {
-					auth.Password = password
-				}
-			}
-			dialer, err := proxy.SOCKS5("tcp", proxyURL.Host, auth, proxy.Direct)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create SOCKS5 dialer: %w", err)
-			}
-			transport.DialContext = func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return dialer.Dial(network, addr)
-			}
-			debug.Printf("Using SOCKS5 proxy: %s", proxyURL.String())
-		default:
-			return nil, fmt.Errorf("unsupported proxy scheme: %s", proxyURL.Scheme)
-		}
-
-		// 如果代理有认证信息，添加 Proxy-Authorization 头
-		if proxyURL.User != nil {
-			auth := proxyURL.User.String()
-			basicAuth := base64.StdEncoding.EncodeToString([]byte(auth))
-			headers := c.llm.BuildHeaders()
-			headers["Proxy-Authorization"] = "Basic " + basicAuth
-			debug.Printf("Added proxy authentication")
-		}
-	}
-
-	// Create a client with the configured transport and timeout
-	client := &http.Client{
-		Transport: transport,
-		Timeout:   time.Duration(c.config.Timeout) * time.Second,
-	}
-
-	return client, nil
 }
