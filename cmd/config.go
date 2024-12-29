@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -11,11 +12,31 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// configKey is a custom type for the context key to avoid collisions
+type configKey struct{}
+
 // NewConfigCmd creates a new config command
 func NewConfigCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",
 		Short: "Manage configuration",
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// Get config path from root command
+			configPath, err := cmd.Root().PersistentFlags().GetString("config")
+			if err != nil {
+				return fmt.Errorf("failed to get config path: %w", err)
+			}
+
+			// Create config manager
+			cfgManager, err := config.New(configPath)
+			if err != nil {
+				return fmt.Errorf("failed to create config manager: %w", err)
+			}
+
+			// Store config manager in context
+			cmd.SetContext(context.WithValue(cmd.Context(), configKey{}, cfgManager))
+			return nil
+		},
 	}
 
 	// get command
@@ -26,9 +47,10 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting get config value")
 
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
 
 			// Get config value
@@ -65,9 +87,10 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting list config content")
 
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
 
 			configStr, err := cfgManager.List()
@@ -86,9 +109,10 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting reset config")
 
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
 
 			promptOnly, _ := cmd.Flags().GetBool("prompt")
@@ -114,9 +138,10 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting set config value")
 
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
 
 			var value interface{}
@@ -140,11 +165,11 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting get config file path")
 
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
-			debug.Println("Created config manager")
 
 			fmt.Printf("Configuration file path: %s\n", cfgManager.GetPath())
 			return nil
@@ -159,11 +184,11 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting remove config value")
 
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
-			debug.Println("Created config manager")
 
 			// Check if key exists before removing
 			_, exists := cfgManager.Get(args[0])
@@ -198,11 +223,11 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting append config value")
 
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
-			debug.Println("Created config manager")
 
 			var value interface{}
 			if err := json.Unmarshal([]byte(args[1]), &value); err != nil {
@@ -233,12 +258,11 @@ func NewConfigCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			debug.Println("Starting list supported config keys")
 
-			// Get config manager
-			cfgManager, err := config.New()
-			if err != nil {
-				return err
+			// Get config manager from context
+			cfgManager, ok := cmd.Context().Value(configKey{}).(*config.Manager)
+			if !ok {
+				return fmt.Errorf("config manager not found in context")
 			}
-			debug.Println("Created config manager")
 
 			// Get supported keys
 			keys := cfgManager.GetSupportedKeys()

@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	internal_cfg "github.com/belingud/go-gptcomet/internal/config"
 	"github.com/belingud/go-gptcomet/pkg/config"
 	"github.com/charmbracelet/bubbles/list"
 	"github.com/charmbracelet/bubbles/textinput"
@@ -37,12 +38,6 @@ var (
 
 	quitTextStyle = lipgloss.NewStyle().
 			Margin(1, 0, 2, 4)
-
-	placeholderStyle = lipgloss.NewStyle().
-				Foreground(lipgloss.Color("240"))
-
-	textStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("252"))
 )
 
 type item struct {
@@ -200,6 +195,9 @@ func NewConfigInput(configs map[string]config.ConfigRequirement) *ConfigInput {
 		input := textinput.New()
 		input.Placeholder = configs[key].DefaultValue
 		input.Width = 40
+		if key == "api_key" {
+			input.EchoMode = textinput.EchoPassword
+		}
 		inputs = append(inputs, input)
 	}
 
@@ -277,6 +275,8 @@ func (m *ConfigInput) View() string {
 			value := m.inputs[i].Value()
 			if value == "" {
 				value = config.DefaultValue
+			} else if key == "api_key" {
+				value = internal_cfg.MaskAPIKey(value, 3)
 			}
 			s.WriteString(fmt.Sprintf("  %s: %s\n", prompt, value))
 		}

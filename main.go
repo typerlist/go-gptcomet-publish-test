@@ -12,7 +12,10 @@ import (
 var version = "dev"
 
 func main() {
-	var debugEnabled bool
+	var (
+		debugEnabled bool
+		configPath   string
+	)
 
 	var rootCmd = &cobra.Command{
 		Use:          "gptcomet",
@@ -22,11 +25,15 @@ func main() {
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			debug.Enable(debugEnabled)
 			debug.Printf("Debug mode enabled")
+			if configPath != "" {
+				debug.Printf("Using config file: %s", configPath)
+			}
 		},
 	}
 
-	// Add debug flag to root command
+	// Add persistent flags to root command
 	rootCmd.PersistentFlags().BoolVarP(&debugEnabled, "debug", "d", false, "Enable debug mode")
+	rootCmd.PersistentFlags().StringVarP(&configPath, "config", "c", "", "Config file path")
 
 	rootCmd.AddCommand(cmd.NewProviderCmd())
 	rootCmd.AddCommand(cmd.NewCommitCmd())

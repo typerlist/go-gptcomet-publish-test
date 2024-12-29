@@ -91,6 +91,7 @@ func (g *GeminiLLM) FormatMessages(message string, history []types.Message) (int
 	if g.Config.PresencePenalty > 0 {
 		payload["generationConfig"].(map[string]interface{})["presencePenalty"] = g.Config.PresencePenalty
 	}
+	debug.Printf("generationConfig: %v", payload["generationConfig"])
 
 	return payload, nil
 }

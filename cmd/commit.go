@@ -137,8 +137,14 @@ func NewCommitCmd() *cobra.Command {
 			}
 			debug.Println("Found staged changes")
 
+			// Get config path from root command
+			configPath, err := cmd.Root().PersistentFlags().GetString("config")
+			if err != nil {
+				return fmt.Errorf("failed to get config path: %w", err)
+			}
+
 			// Create config manager
-			cfgManager, err := config.New()
+			cfgManager, err := config.New(configPath)
 			if err != nil {
 				return fmt.Errorf("failed to create config manager: %w", err)
 			}

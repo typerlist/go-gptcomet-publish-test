@@ -17,7 +17,7 @@ func NewProviderCmd() *cobra.Command {
 		Use:   "newprovider",
 		Short: "Configure a new provider interactively",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// 使用注册的 provider 列表
+			// get providers list
 			providers := llm.GetProviders()
 
 			// Create and run provider selector
@@ -60,8 +60,14 @@ func NewProviderCmd() *cobra.Command {
 			configs := model2.GetConfigs()
 			debug.Printf("Config values: %v", configs)
 
+			// Get config path from root command
+			configPath, err := cmd.Root().PersistentFlags().GetString("config")
+			if err != nil {
+				return fmt.Errorf("failed to get config path: %w", err)
+			}
+
 			// Create config manager
-			cfgManager, err := config.New()
+			cfgManager, err := config.New(configPath)
 			if err != nil {
 				return fmt.Errorf("failed to create config manager: %w", err)
 			}

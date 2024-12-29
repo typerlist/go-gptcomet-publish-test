@@ -20,12 +20,16 @@ type Manager struct {
 }
 
 // New creates a new configuration manager
-func New() (*Manager, error) {
-	configPath, err := getConfigDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get config directory: %w", err)
+func New(configPath string) (*Manager, error) {
+	if configPath == "" {
+		var err error
+		configPath, err = getConfigDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get config directory: %w", err)
+		}
+		configPath = configPath + "/gptcomet.yaml"
 	}
-	configPath = configPath + "/gptcomet.yaml"
+
 	manager := &Manager{
 		config:     make(map[string]interface{}),
 		configPath: configPath,
