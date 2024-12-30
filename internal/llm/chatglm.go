@@ -24,6 +24,10 @@ func NewChatGLMLLM(config *types.ClientConfig) *ChatGLMLLM {
 	}
 }
 
+func (c *ChatGLMLLM) Name() string {
+	return "ChatGLM"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (c *ChatGLMLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

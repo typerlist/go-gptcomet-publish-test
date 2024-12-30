@@ -16,6 +16,9 @@ import (
 
 // LLM is the interface that all LLM providers must implement
 type LLM interface {
+	// Name returns the name of the provider
+	Name() string
+
 	// BuildURL builds the API URL
 	BuildURL() string
 	// GetRequiredConfig returns provider-specific configuration requirements
@@ -217,7 +220,7 @@ func (b *BaseLLM) MakeRequest(ctx context.Context, client *http.Client, provider
 	return provider.ParseResponse(respBody)
 }
 
-// DefaultLLM provides a default implementation of LLM interface
+// DefaultLLM provides default implementation of LLM interface
 type DefaultLLM struct {
 	*BaseLLM
 }
@@ -239,7 +242,11 @@ func NewDefaultLLM(config *types.ClientConfig) *DefaultLLM {
 	}
 }
 
-// MakeRequest implements the LLM interface
+func (d *DefaultLLM) Name() string {
+	return "default"
+}
+
+// MakeRequest makes a request to the API
 func (d *DefaultLLM) MakeRequest(ctx context.Context, client *http.Client, message string, history []types.Message) (string, error) {
 	return d.BaseLLM.MakeRequest(ctx, client, d, message, history)
 }

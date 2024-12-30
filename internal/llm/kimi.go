@@ -24,6 +24,10 @@ func NewKimiLLM(config *types.ClientConfig) *KimiLLM {
 	}
 }
 
+func (k *KimiLLM) Name() string {
+	return "kimi"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (k *KimiLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

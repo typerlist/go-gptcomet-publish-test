@@ -24,6 +24,10 @@ func NewSambanovaLLM(config *types.ClientConfig) *SambanovaLLM {
 	}
 }
 
+func (s *SambanovaLLM) Name() string {
+	return "sambanova"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (s *SambanovaLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

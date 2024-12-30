@@ -41,6 +41,10 @@ func NewGeminiLLM(config *types.ClientConfig) *GeminiLLM {
 	}
 }
 
+func (g *GeminiLLM) Name() string {
+	return "gemini"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (g *GeminiLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

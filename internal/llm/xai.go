@@ -21,6 +21,10 @@ func NewXAILLM(config *types.ClientConfig) *XAILLM {
 	}
 }
 
+func (x *XAILLM) Name() string {
+	return "xai"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (x *XAILLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

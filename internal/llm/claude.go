@@ -40,6 +40,10 @@ func NewClaudeLLM(config *types.ClientConfig) *ClaudeLLM {
 	}
 }
 
+func (c *ClaudeLLM) Name() string {
+	return "Claude"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (c *ClaudeLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

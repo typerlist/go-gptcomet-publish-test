@@ -20,6 +20,10 @@ func NewMistralLLM(config *types.ClientConfig) *MistralLLM {
 	}
 }
 
+func (m *MistralLLM) Name() string {
+	return "mistral"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (m *MistralLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

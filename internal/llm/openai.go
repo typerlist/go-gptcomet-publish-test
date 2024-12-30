@@ -63,6 +63,10 @@ func (o *OpenAILLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	}
 }
 
+func (o *OpenAILLM) Name() string {
+	return "openai"
+}
+
 // FormatMessages formats messages for OpenAI API
 func (o *OpenAILLM) FormatMessages(message string, history []types.Message) (interface{}, error) {
 	return o.BaseLLM.FormatMessages(message, history)

@@ -28,6 +28,10 @@ func NewCohereLLM(config *types.ClientConfig) *CohereLLM {
 	}
 }
 
+func (c *CohereLLM) Name() string {
+	return "cohere"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (c *CohereLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

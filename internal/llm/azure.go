@@ -25,6 +25,10 @@ func NewAzureLLM(config *types.ClientConfig) *AzureLLM {
 	}
 }
 
+func (a *AzureLLM) Name() string {
+	return "azure"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (a *AzureLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

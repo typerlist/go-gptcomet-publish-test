@@ -36,6 +36,10 @@ func NewOllamaLLM(config *types.ClientConfig) *OllamaLLM {
 	}
 }
 
+func (o *OllamaLLM) Name() string {
+	return "ollama"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (o *OllamaLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

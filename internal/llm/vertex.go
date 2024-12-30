@@ -47,6 +47,10 @@ func NewVertexLLM(config *types.ClientConfig) *VertexLLM {
 	}
 }
 
+func (v *VertexLLM) Name() string {
+	return "vertex"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (v *VertexLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

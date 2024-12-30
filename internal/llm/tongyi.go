@@ -33,6 +33,10 @@ func NewTongyiLLM(config *types.ClientConfig) *TongyiLLM {
 	}
 }
 
+func (t *TongyiLLM) Name() string {
+	return "tongyi"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (t *TongyiLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

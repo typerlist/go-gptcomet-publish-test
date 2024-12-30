@@ -24,6 +24,10 @@ func NewDeepSeekLLM(config *types.ClientConfig) *DeepSeekLLM {
 	}
 }
 
+func (d *DeepSeekLLM) Name() string {
+	return "deepseek"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (d *DeepSeekLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{

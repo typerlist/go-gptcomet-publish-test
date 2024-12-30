@@ -24,6 +24,10 @@ func NewSiliconLLM(config *types.ClientConfig) *SiliconLLM {
 	}
 }
 
+func (s *SiliconLLM) Name() string {
+	return "silicon"
+}
+
 // GetRequiredConfig returns provider-specific configuration requirements
 func (s *SiliconLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{
