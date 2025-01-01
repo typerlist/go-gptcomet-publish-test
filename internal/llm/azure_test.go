@@ -15,14 +15,14 @@ func TestNewAzureLLM(t *testing.T) {
 		{
 			name: "default config",
 			config: &types.ClientConfig{
-				APIBase:         "https://test.openai.azure.com",
+				APIBase:        "https://test.openai.azure.com",
 				DeploymentName: "test-deployment",
 			},
 			want: &AzureLLM{
 				OpenAILLM: &OpenAILLM{
 					BaseLLM: &BaseLLM{
 						Config: &types.ClientConfig{
-							APIBase:         "https://test.openai.azure.com",
+							APIBase:        "https://test.openai.azure.com",
 							DeploymentName: "test-deployment",
 							Model:          "gpt-4o",
 							CompletionPath: "deployments/test-deployment/chat/completions",
@@ -34,7 +34,7 @@ func TestNewAzureLLM(t *testing.T) {
 		{
 			name: "custom model",
 			config: &types.ClientConfig{
-				APIBase:         "https://test.openai.azure.com",
+				APIBase:        "https://test.openai.azure.com",
 				DeploymentName: "test-deployment",
 				Model:          "custom-model",
 			},
@@ -42,7 +42,7 @@ func TestNewAzureLLM(t *testing.T) {
 				OpenAILLM: &OpenAILLM{
 					BaseLLM: &BaseLLM{
 						Config: &types.ClientConfig{
-							APIBase:         "https://test.openai.azure.com",
+							APIBase:        "https://test.openai.azure.com",
 							DeploymentName: "test-deployment",
 							Model:          "custom-model",
 							CompletionPath: "deployments/test-deployment/chat/completions",
@@ -76,7 +76,7 @@ func TestAzureLLM_Name(t *testing.T) {
 func TestAzureLLM_GetRequiredConfig(t *testing.T) {
 	llm := NewAzureLLM(&types.ClientConfig{})
 	got := llm.GetRequiredConfig()
-	
+
 	requiredKeys := []string{
 		"api_base",
 		"deployment_name",
@@ -102,7 +102,7 @@ func TestAzureLLM_BuildURL(t *testing.T) {
 		{
 			name: "standard url",
 			config: &types.ClientConfig{
-				APIBase:         "https://test.openai.azure.com",
+				APIBase:        "https://test.openai.azure.com",
 				DeploymentName: "test-deployment",
 				APIVersion:     "2024-02-15-preview",
 				CompletionPath: "deployments/test-deployment/chat/completions",
@@ -112,7 +112,7 @@ func TestAzureLLM_BuildURL(t *testing.T) {
 		{
 			name: "url with trailing slash",
 			config: &types.ClientConfig{
-				APIBase:         "https://test.openai.azure.com/",
+				APIBase:        "https://test.openai.azure.com/",
 				DeploymentName: "test-deployment",
 				APIVersion:     "2024-02-15-preview",
 				CompletionPath: "deployments/test-deployment/chat/completions",
@@ -145,8 +145,8 @@ func TestAzureLLM_BuildHeaders(t *testing.T) {
 			},
 			want: map[string]string{
 				"Content-Type": "application/json",
-				"api-key":     "test-key",
-				"api-version": "2024-02-15-preview",
+				"api-key":      "test-key",
+				"api-version":  "2024-02-15-preview",
 			},
 		},
 		{
@@ -160,9 +160,9 @@ func TestAzureLLM_BuildHeaders(t *testing.T) {
 			},
 			want: map[string]string{
 				"Content-Type": "application/json",
-				"api-key":     "test-key",
-				"api-version": "2024-02-15-preview",
-				"X-Custom":    "custom-value",
+				"api-key":      "test-key",
+				"api-version":  "2024-02-15-preview",
+				"X-Custom":     "custom-value",
 			},
 		},
 	}
@@ -171,7 +171,7 @@ func TestAzureLLM_BuildHeaders(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			llm := NewAzureLLM(tt.config)
 			got := llm.BuildHeaders()
-			
+
 			for k, v := range tt.want {
 				if got[k] != v {
 					t.Errorf("AzureLLM.BuildHeaders()[%v] = %v, want %v", k, got[k], v)

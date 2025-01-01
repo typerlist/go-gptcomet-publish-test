@@ -64,10 +64,10 @@ func (a *AzureLLM) BuildURL() string {
 		// Use model name as deployment name if not specified
 		a.Config.DeploymentName = a.Config.Model
 	}
-	
+
 	// Clean the base URL by removing trailing slashes
 	baseURL := strings.TrimSuffix(a.Config.APIBase, "/")
-	
+
 	// Azure OpenAI URL format: {endpoint}/deployments/{deployment-id}/chat/completions?api-version={api-version}
 	return fmt.Sprintf("%s/%s?api-version=%s",
 		strings.TrimSuffix(baseURL, "?api-version="+a.Config.APIVersion),

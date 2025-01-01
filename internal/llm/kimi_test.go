@@ -149,7 +149,7 @@ func TestKimiLLM_BuildHeaders(t *testing.T) {
 			want: map[string]string{
 				"Authorization": "Bearer test-key",
 				"Content-Type":  "application/json",
-				"X-Custom":     "custom-value",
+				"X-Custom":      "custom-value",
 			},
 		},
 	}
@@ -158,7 +158,7 @@ func TestKimiLLM_BuildHeaders(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			llm := NewKimiLLM(tt.config)
 			got := llm.BuildHeaders()
-			
+
 			for k, v := range tt.want {
 				if got[k] != v {
 					t.Errorf("BuildHeaders()[%s] = %s, want %s", k, got[k], v)

@@ -13,7 +13,7 @@ func TestNewChatGLMLLM(t *testing.T) {
 		want   *ChatGLMLLM
 	}{
 		{
-			name: "default config",
+			name:   "default config",
 			config: &types.ClientConfig{},
 			want: &ChatGLMLLM{
 				OpenAILLM: &OpenAILLM{

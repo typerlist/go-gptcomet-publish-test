@@ -12,9 +12,9 @@ func TestNewOllamaLLM(t *testing.T) {
 		config *types.ClientConfig
 		want   struct {
 			apiBase        string
-			model         string
+			model          string
 			completionPath string
-			answerPath    string
+			answerPath     string
 		}
 	}{
 		{
@@ -22,34 +22,34 @@ func TestNewOllamaLLM(t *testing.T) {
 			config: &types.ClientConfig{},
 			want: struct {
 				apiBase        string
-				model         string
+				model          string
 				completionPath string
-				answerPath    string
+				answerPath     string
 			}{
 				apiBase:        "http://localhost:11434/api",
-				model:         "llama2",
+				model:          "llama2",
 				completionPath: "generate",
-				answerPath:    "response",
+				answerPath:     "response",
 			},
 		},
 		{
 			name: "custom config",
 			config: &types.ClientConfig{
 				APIBase:        "http://custom.api.com",
-				Model:         "custom-model",
+				Model:          "custom-model",
 				CompletionPath: "custom/path",
-				AnswerPath:    "custom.path",
+				AnswerPath:     "custom.path",
 			},
 			want: struct {
 				apiBase        string
-				model         string
+				model          string
 				completionPath string
-				answerPath    string
+				answerPath     string
 			}{
 				apiBase:        "http://custom.api.com",
-				model:         "custom-model",
+				model:          "custom-model",
 				completionPath: "custom/path",
-				answerPath:    "custom.path",
+				answerPath:     "custom.path",
 			},
 		},
 	}
@@ -110,14 +110,14 @@ func TestOllamaLLM_FormatMessages(t *testing.T) {
 		Model:             "llama2",
 		MaxTokens:         1024,
 		Temperature:       0.7,
-		TopP:             0.9,
-		TopK:             40,
+		TopP:              0.9,
+		TopK:              40,
 		RepetitionPenalty: 1.1,
 		FrequencyPenalty:  0.5,
 		PresencePenalty:   0.5,
-		Seed:             42,
-		NumGPU:           1,
-		MainGPU:          0,
+		Seed:              42,
+		NumGPU:            1,
+		MainGPU:           0,
 	})
 
 	message := "test message"
@@ -149,15 +149,15 @@ func TestOllamaLLM_FormatMessages(t *testing.T) {
 	}
 
 	expectedOptions := map[string]interface{}{
-		"num_predict":         1024,
-		"temperature":         0.7,
+		"num_predict":        1024,
+		"temperature":        0.7,
 		"top_p":              0.9,
 		"top_k":              40,
-		"repetition_penalty":  1.1,
-		"frequency_penalty":   0.5,
-		"presence_penalty":    0.5,
-		"seed":                42,
-		"num_gpu":             1,
+		"repetition_penalty": 1.1,
+		"frequency_penalty":  0.5,
+		"presence_penalty":   0.5,
+		"seed":               42,
+		"num_gpu":            1,
 		// 移除 main_gpu，因为它是可选的且当值为 0 时可能不会被包含在选项中
 	}
 
@@ -208,7 +208,7 @@ func TestOllamaLLM_BuildHeaders(t *testing.T) {
 			},
 			want: map[string]string{
 				"Content-Type": "application/json",
-				"X-Custom":    "custom-value",
+				"X-Custom":     "custom-value",
 			},
 		},
 	}
