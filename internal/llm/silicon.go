@@ -13,7 +13,7 @@ type SiliconLLM struct {
 // NewSiliconLLM creates a new SiliconLLM
 func NewSiliconLLM(config *types.ClientConfig) *SiliconLLM {
 	if config.APIBase == "" {
-		config.APIBase = "https://api.silicon.ai/v1"
+		config.APIBase = "https://api.silicon.cn/v1"
 	}
 	if config.Model == "" {
 		config.Model = "Qwen/Qwen2.5-7B-Instruct"
@@ -32,7 +32,7 @@ func (s *SiliconLLM) Name() string {
 func (s *SiliconLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{
 		"api_base": {
-			DefaultValue:  "https://api.silicon.ai/v1",
+			DefaultValue:  "https://api.silicon.cn/v1",
 			PromptMessage: "Enter Silicon API base",
 		},
 		"api_key": {

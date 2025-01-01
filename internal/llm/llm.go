@@ -45,7 +45,10 @@ type BaseLLM struct {
 	Config *types.ClientConfig
 }
 
-// NewBaseLLM creates a new BaseLLM
+// NewBaseLLM creates a new BaseLLM.
+//
+// If config is nil, it sets default values for the required configuration
+// options. Otherwise, it uses the values provided in config.
 func NewBaseLLM(config *types.ClientConfig) *BaseLLM {
 	if config == nil {
 		config = &types.ClientConfig{}
@@ -63,6 +66,13 @@ func NewBaseLLM(config *types.ClientConfig) *BaseLLM {
 }
 
 // GetRequiredConfig returns provider-specific configuration requirements
+//
+// The map keys are the configuration option names, and the values are
+// config.ConfigRequirement structs that define the default value and
+// prompt message for each option.
+//
+// The default values are only used if the user does not provide a value
+// for the option.
 func (b *BaseLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{
 		"api_base": {
@@ -84,7 +94,10 @@ func (b *BaseLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	}
 }
 
-// FormatMessages provides a default implementation for formatting messages (OpenAI format)
+// FormatMessages formats messages for the provider's API
+//
+// This is a default implementation which should be overridden by the
+// provider if it needs to format the messages differently.
 func (b *BaseLLM) FormatMessages(message string, history []types.Message) (interface{}, error) {
 	messages := make([]types.Message, 0, len(history)+1)
 	if history != nil {
@@ -130,12 +143,16 @@ func (b *BaseLLM) BuildHeaders() map[string]string {
 	return headers
 }
 
-// BuildURL provides a default implementation for building URL
+// BuildURL builds the API URL by trimming and joining the API base and completion path.
 func (b *BaseLLM) BuildURL() string {
 	return fmt.Sprintf("%s/%s", strings.TrimSuffix(b.Config.APIBase, "/"), strings.TrimPrefix(b.Config.CompletionPath, "/"))
 }
 
-// ParseResponse provides a default implementation for parsing response
+// ParseResponse parses the response from the API according to the provider's
+// configuration. It first tries to extract the answer using the answer path
+// specified in the configuration. If the answer is not found, it returns an
+// error. If the answer is found, it trims any leading or trailing triple backticks
+// if present, and returns the trimmed text.
 func (b *BaseLLM) ParseResponse(response []byte) (string, error) {
 	result := gjson.GetBytes(response, b.Config.AnswerPath)
 	if !result.Exists() {
@@ -149,7 +166,10 @@ func (b *BaseLLM) ParseResponse(response []byte) (string, error) {
 	return strings.TrimSpace(text), nil
 }
 
-// GetUsage provides a default implementation for getting usage information
+// GetUsage returns a string representing the token usage of the response.
+// It tries to extract the usage information from the response data using the
+// following field names: "prompt_tokens", "completion_tokens", and "total_tokens".
+// If the information is not found, it returns an empty string.
 func (b *BaseLLM) GetUsage(data []byte) (string, error) {
 	usage := gjson.GetBytes(data, "usage")
 	if !usage.Exists() {
@@ -171,7 +191,20 @@ func (b *BaseLLM) GetUsage(data []byte) (string, error) {
 	), nil
 }
 
-// MakeRequest provides a default implementation for making requests
+// MakeRequest makes a request to the provider's API, formats the response, and
+// returns the result as a string.
+//
+// If the request fails or the response is invalid, it returns an error.
+//
+// The function takes the following parameters:
+//   - ctx: the context for the request
+//   - client: the HTTP client to use for the request
+//   - provider: the provider to make the request to
+//   - message: the message to send to the provider
+//   - history: the message history to send to the provider
+//
+// The function returns the response from the provider as a string, or an error
+// if the request fails.
 func (b *BaseLLM) MakeRequest(ctx context.Context, client *http.Client, provider LLM, message string, history []types.Message) (string, error) {
 	url := provider.BuildURL()
 	headers := provider.BuildHeaders()
@@ -225,7 +258,10 @@ type DefaultLLM struct {
 	*BaseLLM
 }
 
-// NewDefaultLLM creates a new DefaultLLM
+// NewDefaultLLM creates a new DefaultLLM.
+//
+// If config is nil, it sets default values for the required configuration
+// options. Otherwise, it uses the values provided in config.
 func NewDefaultLLM(config *types.ClientConfig) *DefaultLLM {
 	if config == nil {
 		config = &types.ClientConfig{}
@@ -242,11 +278,12 @@ func NewDefaultLLM(config *types.ClientConfig) *DefaultLLM {
 	}
 }
 
+// Name returns the name of the provider, which is "default" for DefaultLLM.
 func (d *DefaultLLM) Name() string {
 	return "default"
 }
 
-// MakeRequest makes a request to the API
+// MakeRequest implements the LLM interface for DefaultLLM.
 func (d *DefaultLLM) MakeRequest(ctx context.Context, client *http.Client, message string, history []types.Message) (string, error) {
 	return d.BaseLLM.MakeRequest(ctx, client, d, message, history)
 }

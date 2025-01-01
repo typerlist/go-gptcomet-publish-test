@@ -52,80 +52,78 @@ func NewProvider(name string, config *types.ClientConfig) (LLM, error) {
 
 // 在 init 函数中注册所有 provider
 func init() {
-	// OpenAI
-	RegisterProvider("openai", func(config *types.ClientConfig) LLM {
-		return &OpenAILLM{BaseLLM: NewBaseLLM(config)}
+	// Azure
+	RegisterProvider("azure", func(config *types.ClientConfig) LLM {
+		return &AzureLLM{}
 	})
 
-	/*
-		// Azure
-		RegisterProvider("azure", func(config *types.ClientConfig) LLM {
-			return &AzureLLM{}
-		})
+	// ChatGLM
+	RegisterProvider("chatglm", func(config *types.ClientConfig) LLM {
+		return &ChatGLMLLM{}
+	})
 
-		// ChatGLM
-		RegisterProvider("chatglm", func(config *types.ClientConfig) LLM {
-			return &ChatGLMLLM{}
-		})
+	// Claude
+	RegisterProvider("claude", func(config *types.ClientConfig) LLM {
+		return &ClaudeLLM{}
+	})
 
-		// Claude
-		RegisterProvider("claude", func(config *types.ClientConfig) LLM {
-			return &ClaudeLLM{}
-		})
+	// Cohere
+	RegisterProvider("cohere", func(config *types.ClientConfig) LLM {
+		return &CohereLLM{}
+	})
 
-		// Cohere
-		RegisterProvider("cohere", func(config *types.ClientConfig) LLM {
-			return &CohereLLM{}
-		})
+	// Deepseek
+	RegisterProvider("deepseek", func(config *types.ClientConfig) LLM {
+		return &DeepSeekLLM{}
+	})
 
-		// Deepseek
-		RegisterProvider("deepseek", func(config *types.ClientConfig) LLM {
-			return &DeepSeekLLM{}
-		})
+	// Gemini
+	RegisterProvider("gemini", func(config *types.ClientConfig) LLM {
+		return &GeminiLLM{}
+	})
 
-		// Gemini
-		RegisterProvider("gemini", func(config *types.ClientConfig) LLM {
-			return &GeminiLLM{}
-		})
+	// Kimi
+	RegisterProvider("kimi", func(config *types.ClientConfig) LLM {
+		return &KimiLLM{}
+	})
 
-		// Kimi
-		RegisterProvider("kimi", func(config *types.ClientConfig) LLM {
-			return &KimiLLM{}
-		})
+	// Mistral
+	RegisterProvider("mistral", func(config *types.ClientConfig) LLM {
+		return &MistralLLM{}
+	})
 
-		// Mistral
-		RegisterProvider("mistral", func(config *types.ClientConfig) LLM {
-			return &MistralLLM{}
-		})
+	// Ollama
+	RegisterProvider("ollama", func(config *types.ClientConfig) LLM {
+		return &OllamaLLM{}
+	})
 
-		// Ollama
-		RegisterProvider("ollama", func(config *types.ClientConfig) LLM {
-			return &OllamaLLM{}
-		})
+	// OpenAI
+	RegisterProvider("openai", func(config *types.ClientConfig) LLM {
+		return &OpenAILLM{}
+	})
 
-		// Sambanova
-		RegisterProvider("sambanova", func(config *types.ClientConfig) LLM {
-			return &SambanovaLLM{}
-		})
+	// Sambanova
+	RegisterProvider("sambanova", func(config *types.ClientConfig) LLM {
+		return &SambanovaLLM{}
+	})
 
-		// Silicon
-		RegisterProvider("silicon", func(config *types.ClientConfig) LLM {
-			return &SiliconLLM{}
-		})
+	// Silicon
+	RegisterProvider("silicon", func(config *types.ClientConfig) LLM {
+		return &SiliconLLM{}
+	})
 
-		// Tongyi
-		RegisterProvider("tongyi", func(config *types.ClientConfig) LLM {
-			return &TongyiLLM{}
-		})
+	// Tongyi
+	RegisterProvider("tongyi", func(config *types.ClientConfig) LLM {
+		return &TongyiLLM{}
+	})
 
-		// Vertex
-		RegisterProvider("vertex", func(config *types.ClientConfig) LLM {
-			return &VertexLLM{}
-		})
+	// Vertex
+	RegisterProvider("vertex", func(config *types.ClientConfig) LLM {
+		return &VertexLLM{}
+	})
 
-		// XAI
-		RegisterProvider("xai", func(config *types.ClientConfig) LLM {
-			return &XAILLM{}
-		})
-	*/
+	// XAI
+	RegisterProvider("xai", func(config *types.ClientConfig) LLM {
+		return &XAILLM{}
+	})
 }

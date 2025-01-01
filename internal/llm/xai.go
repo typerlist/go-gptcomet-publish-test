@@ -16,6 +16,10 @@ func NewXAILLM(config *types.ClientConfig) *XAILLM {
 		config.APIBase = "https://api.x.ai/v1"
 	}
 
+	if config.Model == "" {
+		config.Model = "grok-beta"
+	}
+
 	return &XAILLM{
 		OpenAILLM: NewOpenAILLM(config),
 	}

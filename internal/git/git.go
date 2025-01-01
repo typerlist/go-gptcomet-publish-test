@@ -17,7 +17,15 @@ const (
 	colorGreen = "\033[32m"
 )
 
-// GetDiff returns the git diff for staged changes
+// GetDiff retrieves the staged git diff for the specified repository path.
+// It runs the "git diff --staged -U2" command and filters out lines that start with "index", "---", and "+++".
+//
+// Parameters:
+//   - repoPath: The file path to the git repository.
+//
+// Returns:
+//   - A string containing the filtered diff output.
+//   - An error if the command fails or if the specified path is not a git repository.
 func GetDiff(repoPath string) (string, error) {
 	cmd := exec.Command("git", "diff", "--staged", "-U2")
 	cmd.Dir = repoPath
@@ -48,7 +56,20 @@ func GetDiff(repoPath string) (string, error) {
 	return strings.Join(filteredLines, "\n"), nil
 }
 
-// HasStagedChanges checks if there are any staged changes
+// HasStagedChanges checks if there are any staged changes in the git repository at the given path.
+// It runs "git diff --staged --quiet" command and interprets the exit code to determine if there
+// are staged changes.
+//
+// Parameters:
+//   - repoPath: The file system path to the git repository
+//
+// Returns:
+//   - bool: true if there are staged changes, false otherwise
+//   - error: nil if the command executed successfully, error otherwise
+//
+// The function returns true if the git diff command exits with code 1 (staged changes present),
+// false if it exits with code 0 (no staged changes), and an error for any other exit code or
+// if the command fails to execute.
 func HasStagedChanges(repoPath string) (bool, error) {
 	cmd := exec.Command("git", "diff", "--staged", "--quiet")
 	cmd.Dir = repoPath
@@ -70,7 +91,19 @@ func HasStagedChanges(repoPath string) (bool, error) {
 	return false, nil
 }
 
-// GetStagedFiles returns a list of staged files
+// GetStagedFiles returns a list of files that are currently staged for commit in the git repository
+// at the specified path. It executes the 'git diff --staged --name-only' command to get the list
+// of staged files.
+//
+// Parameters:
+//   - repoPath: The file system path to the git repository
+//
+// Returns:
+//   - []string: A slice containing the paths of all staged files, or nil if no files are staged
+//   - error: An error if the git command fails or if there are issues accessing the repository
+//
+// The function will return (nil, nil) if there are no staged files in the repository.
+// If the git command fails, it returns a detailed error message including the exit code.
 func GetStagedFiles(repoPath string) ([]string, error) {
 	cmd := exec.Command("git", "diff", "--staged", "--name-only")
 	cmd.Dir = repoPath
@@ -102,7 +135,19 @@ func ShouldIgnoreFile(file string, ignorePatterns []string) bool {
 	return false
 }
 
-// GetStagedDiffFiltered returns the git diff for staged changes, excluding ignored files
+// GetStagedDiffFiltered returns the git diff for staged changes, excluding files that match the patterns
+// specified in the config manager under the "file_ignore" key.
+//
+// Parameters:
+//   - repoPath: The file system path to the git repository
+//   - cfgManager: The config manager to use for retrieving ignore patterns
+//
+// Returns:
+//   - string: The filtered diff output
+//   - error: An error if the git command fails or if there are issues accessing the repository
+//
+// The function will return an empty string if there are no staged files in the repository.
+// If the git command fails, it returns a detailed error message including the exit code.
 func GetStagedDiffFiltered(repoPath string, cfgManager *config.Manager) (string, error) {
 	// First get staged files
 	files, err := GetStagedFiles(repoPath)
@@ -153,7 +198,15 @@ func GetStagedDiffFiltered(repoPath string, cfgManager *config.Manager) (string,
 	return string(output), nil
 }
 
-// GetCurrentBranch returns the current branch name
+// GetCurrentBranch returns the name of the current branch in the git repository
+// at the specified path.
+//
+// Parameters:
+//   - repoPath: The file system path to the git repository
+//
+// Returns:
+//   - string: The name of the current branch
+//   - error: An error if the git command fails or if there are issues accessing the repository
 func GetCurrentBranch(repoPath string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	cmd.Dir = repoPath
@@ -173,6 +226,14 @@ func GetCurrentBranch(repoPath string) (string, error) {
 
 // GetCommitInfo returns formatted information about the commit
 // If commitHash is empty, returns info about the last commit
+//
+// Parameters:
+//   - repoPath: The file system path to the git repository
+//   - commitHash: The hash of the commit to get info for (or empty for the last commit)
+//
+// Returns:
+//   - string: The formatted commit info
+//   - error: An error if the git command fails or if there are issues accessing the repository
 func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 	if commitHash == "" {
 		// Get last commit hash
@@ -230,6 +291,12 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 }
 
 // GetLastCommitHash returns the hash of the last commit
+// Parameters:
+//   - repoPath: The file system path to the git repository
+//
+// Returns:
+//   - string: The hash of the last commit
+//   - error: An error if the git command fails or if there are issues accessing the repository
 func GetLastCommitHash(repoPath string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repoPath
@@ -244,6 +311,13 @@ func GetLastCommitHash(repoPath string) (string, error) {
 }
 
 // CreateCommit creates a git commit with the given message
+//
+// Parameters:
+//   - repoPath: The file system path to the git repository
+//   - message: The commit message
+//
+// Returns:
+//   - error: An error if the git command fails or if there are issues accessing the repository
 func CreateCommit(repoPath string, message string) error {
 	cmd := exec.Command("git", "commit", "-m", message)
 	cmd.Dir = repoPath

@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/belingud/go-gptcomet/internal/config"
 	"github.com/belingud/go-gptcomet/internal/debug"
@@ -19,6 +20,16 @@ func NewProviderCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// get providers list
 			providers := llm.GetProviders()
+
+			// In test environment, skip interactive selection
+			if os.Getenv("GPTCOMET_TEST") == "1" {
+				// Just list providers
+				fmt.Fprintln(cmd.OutOrStdout(), "Available providers:")
+				for _, p := range providers {
+					fmt.Fprintln(cmd.OutOrStdout(), "-", p)
+				}
+				return nil
+			}
 
 			// Create and run provider selector
 			selector := ui.NewProviderSelector(providers)

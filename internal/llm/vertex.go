@@ -24,19 +24,17 @@ func NewVertexLLM(config *types.ClientConfig) *VertexLLM {
 		config.Model = "gemini-1.5-flash"
 	}
 
-	projectID := config.ProjectID
-	if projectID == "" {
-		projectID = "default-project"
+	if config.ProjectID == "" {
+		config.ProjectID = "default-project"
 	}
 
-	location := config.Location
-	if location == "" {
-		location = "us-central1"
+	if config.Location == "" {
+		config.Location = "us-central1"
 	}
 
 	if config.CompletionPath == "" {
 		config.CompletionPath = fmt.Sprintf("projects/%s/locations/%s/publishers/google/models/%s:generateContent",
-			projectID, location, config.Model)
+			config.ProjectID, config.Location, config.Model)
 	}
 	if config.AnswerPath == "" {
 		config.AnswerPath = "candidates.0.content.parts.0.text"

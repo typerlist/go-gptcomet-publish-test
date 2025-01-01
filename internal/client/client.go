@@ -69,14 +69,6 @@ func New(config *types.ClientConfig) *Client {
 	}
 }
 
-// RawChat sends a chat completion request and returns the raw JSON response
-func (c *Client) RawChat(messages []types.Message) (string, error) {
-	return c.sendRawRequest(&types.CompletionRequest{
-		Model:    c.config.Model,
-		Messages: messages,
-	})
-}
-
 // Chat sends a chat message to the LLM provider
 func (c *Client) Chat(ctx context.Context, message string, history []types.Message) (*types.CompletionResponse, error) {
 	client, err := c.getClient()

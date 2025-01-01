@@ -15,6 +15,9 @@ func NewMistralLLM(config *types.ClientConfig) *MistralLLM {
 	if config.APIBase == "" {
 		config.APIBase = "https://api.mistral.ai/v1"
 	}
+	if config.Model == "" {
+		config.Model = "mistral-large-latest"
+	}
 	return &MistralLLM{
 		OpenAILLM: NewOpenAILLM(config),
 	}

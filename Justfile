@@ -1,64 +1,57 @@
-# Default goal: help
+# Show available commands
 help:
     @just --list
 
-# Install the environment
-install:
-    @echo "🚀 Creating virtual environment using pyenv and PDM"
-    pdm install
-
-# Run code quality tools
-check:
-    @echo "🚀 Checking pdm lock file consistency with 'pyproject.toml': Running pdm lock --check"
-    pdm lock --check
-    @echo "🚀 Linting code: Running pre-commit"
-    pdm run pre-commit run -a
-    @echo "🚀 Linting with ruff"
-    pdm run ruff check . --config pyproject.toml
-    @echo "🚀 Checking for obsolete dependencies: Running deptry"
-    pdm run deptry .
-
-# Format code with ruff and isort
-format:
-    @echo "🚀 Formatting code: Running ruff"
-    pdm run ruff format . --config pyproject.toml
-    @echo "🚀 Formatting code: Running isort"
-    pdm run isort . --settings-path pyproject.toml
-
-# Test the code with pytest
-test:
-    @echo "🚀 Testing code: Running pytest"
-    pdm run pytest --cov --cov-config=pyproject.toml --cov-report=xml tests
-
-# Clean build artifacts
-clean-build:
-    rm -rf dist
-
-# Build wheel file
-build: clean-build
-    @echo "🚀 Creating wheel file"
-    pdm build
-
-# Publish a release to PyPI
-publish:
-    @echo "🚀 Publishing."
-    pdm publish --username __token__
-
-# Publish a release to TestPyPI
-publish-test:
-    @echo "🚀 Publishing to testpypi."
-    pdm publish -r testpypi --username __token__
-
-# Build and publish
-build-and-publish: build publish
-
-# Test if documentation can be built without warnings or errors
-docs-test:
-    pdm run mkdocs build -s
-
-# Build and serve the documentation
-docs:
-    pdm run mkdocs serve
-
+# Generate changelog
 changelog:
     git cliff -l --prepend CHANGELOG.md
+
+# Display all available commands
+default:
+    @just --list
+
+# Run all tests
+test:
+    go test ./... -v
+
+# Generate coverage report
+coverage:
+    go test ./... -coverprofile=coverage.out
+    go tool cover -func=coverage.out
+
+# Generate HTML coverage report
+coverage-html: coverage
+    go tool cover -html=coverage.out -o coverage.html
+
+# Run code linting
+lint:
+    golangci-lint run ./...
+
+# Format code
+fmt:
+    go fmt ./...
+    gofmt -s -w .
+
+# Update dependencies
+tidy:
+    go mod tidy
+
+# Build project
+build:
+    go build -v ./...
+
+# Clean build and test artifacts
+clean:
+    rm -f coverage.out coverage.html
+    go clean
+
+# Run all quality checks (test + lint)
+check: test lint
+
+# Install development dependencies
+dev-deps:
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
+# Run local development server
+run:
+    go run main.go

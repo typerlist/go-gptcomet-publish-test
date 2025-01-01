@@ -6,8 +6,9 @@ import (
 )
 
 var (
-	isDebug bool
-	logger  *log.Logger
+	isDebug  bool
+	logger   *log.Logger
+	exitFunc = os.Exit // replacable for testing
 )
 
 func init() {
@@ -38,12 +39,20 @@ func Println(args ...interface{}) {
 	}
 }
 
-// Fatal prints a debug message and exits
+// Fatal prints a debug message and exits if debug mode is enabled
 func Fatal(args ...interface{}) {
-	logger.Fatal(args...)
+	if isDebug {
+		logger.Fatal(args...)
+	} else {
+		exitFunc(1)
+	}
 }
 
-// Fatalf prints a formatted debug message and exits
+// Fatalf prints a formatted debug message and exits if debug mode is enabled
 func Fatalf(format string, args ...interface{}) {
-	logger.Fatalf(format, args...)
+	if isDebug {
+		logger.Fatalf(format, args...)
+	} else {
+		exitFunc(1)
+	}
 }
