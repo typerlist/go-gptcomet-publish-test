@@ -1,5 +1,34 @@
 
 ---
+## [0.0.4](https://github.com/belingud/gptcomet/compare/v0.0.3..v0.0.4) - 2025-01-01
+
+### ⛰️  Features
+
+- Implement LLM provider name and register logic - ([d9a4458](https://github.com/belingud/gptcomet/commit/d9a4458f4968dc9cb80a4790d917ab98b282995c)) - belingud
+- add config context and file path flag - ([668a56e](https://github.com/belingud/gptcomet/commit/668a56e24e5cebf5c0fc4b157c445f8e655e3ca6)) - belingud
+
+### 📚 Documentation
+
+- update changelog and add new providers support - ([e2f03f7](https://github.com/belingud/gptcomet/commit/e2f03f730ee4aae1ef2478239452b6eb6f15266d)) - belingud
+- update README with go version - ([92642ef](https://github.com/belingud/gptcomet/commit/92642ef1d4ef31421dd02fce86150b9948887036)) - belingud
+
+### 🎨 Styling
+
+- update test cases and configurations for various LLMs - ([1b3c41e](https://github.com/belingud/gptcomet/commit/1b3c41e4938c7a27aeaa1e484ea4b2a0c02d0cca)) - belingud
+
+### 🧪 Testing
+
+- add defaults_test.go for prompt defaults - ([40cd45c](https://github.com/belingud/gptcomet/commit/40cd45c3d6b16904ccc1020de95242f4163071a3)) - belingud
+- add test files and implementations for client, config, debug, git, and llm - ([7ea24c9](https://github.com/belingud/gptcomet/commit/7ea24c9faa0dbabe3ece6ddd46476619d5edc273)) - belingud
+- add tests for commit, config, and provider - ([92fa892](https://github.com/belingud/gptcomet/commit/92fa8922579a8da36a33a7959f3eec8be0284dae)) - belingud
+
+### ⚙️ Miscellaneous Tasks
+
+- delete useless codes - ([ea2f69a](https://github.com/belingud/gptcomet/commit/ea2f69a830e3ac17bbbc168bbf5c66167a4c0b9d)) - belingud
+- refactor justfile and improve code quality - ([fa2d9a6](https://github.com/belingud/gptcomet/commit/fa2d9a609a8d61e7afab563562a3bdd6b582e73e)) - belingud
+
+
+---
 ## [0.0.3](https://github.com/belingud/gptcomet/compare/v0.0.2..v0.0.3) - 2024-12-29
 
 ### ⛰️  Features
