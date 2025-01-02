@@ -29,9 +29,6 @@
   - [Acknowledgements](#acknowledgements)
 
 <!-- /TOC -->
-<!-- /TOC -->
-<!-- /TOC -->
-<!-- /TOC -->
 ## Description
 
 GPTComet is an AI-powered command-line tool that generates and creates conventional Git commit messages based on staged changes. It leverages various Large Language Models (LLMs) to analyze the diff and produce meaningful commit messages, streamlining the development workflow.
