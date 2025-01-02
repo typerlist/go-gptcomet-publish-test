@@ -32,7 +32,7 @@ func (s *SiliconLLM) Name() string {
 func (s *SiliconLLM) GetRequiredConfig() map[string]config.ConfigRequirement {
 	return map[string]config.ConfigRequirement{
 		"api_base": {
-			DefaultValue:  "https://api.silicon.cn/v1",
+			DefaultValue:  "https://api.siliconflow.cn/v1",
 			PromptMessage: "Enter Silicon API base",
 		},
 		"api_key": {
