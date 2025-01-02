@@ -196,7 +196,8 @@ func (g *GitVCS) GetStagedDiffFiltered(repoPath string, cfgManager *config.Manag
 //   - error: An error if the git command fails or if there are issues accessing the repository
 func (g *GitVCS) GetCurrentBranch(repoPath string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	return g.runCommand(cmd, repoPath)
+	output, err := g.runCommand(cmd, repoPath)
+	return strings.TrimSpace(output), err
 }
 
 // GetCommitInfo returns formatted information about the commit
