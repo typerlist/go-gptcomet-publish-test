@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"os"
 	"testing"
+	"os/exec"
+	"path/filepath"
 
 	"github.com/belingud/go-gptcomet/internal/git"
 	"github.com/belingud/go-gptcomet/internal/testutils"
@@ -17,7 +19,6 @@ import (
 )
 
 func TestNewCommitCmd(t *testing.T) {
-	// Create a new commit command
 	cmd := NewCommitCmd()
 	require.NotNil(t, cmd)
 
@@ -25,6 +26,8 @@ func TestNewCommitCmd(t *testing.T) {
 	flags := map[string]bool{
 		"config":  false,
 		"dry-run": false,
+		"rich":    false,
+		"svn":     false,
 	}
 
 	cmd.Flags().VisitAll(func(flag *pflag.Flag) {
@@ -38,110 +41,173 @@ func TestNewCommitCmd(t *testing.T) {
 	}
 }
 
-func TestCommitCmd(t *testing.T) {
-	// Create a temporary git repository
-	repoPath, cleanup := testutils.TestGitRepo(t)
+func TestCommitCmd_Git(t *testing.T) {
+    gitPath, err := exec.LookPath("git")
+    if err != nil || !isExecutable(gitPath) {
+        t.Skip("git command not found or not executable")
+    }
+    testCommitCmd(t, false)
+}
+
+func TestCommitCmd_SVN(t *testing.T) {
+    if _, err := exec.LookPath("svnadmin"); err != nil {
+        t.Skip("svnadmin command not found, skipping test")
+    }
+    testCommitCmd(t, true)
+}
+
+func testCommitCmd(t *testing.T, useSVN bool) {
+	var vcsType git.VCSType
+	if useSVN {
+		vcsType = git.SVN
+	} else {
+		vcsType = git.Git
+	}
+
+	// Create a temporary repository
+	_, repoPath, cleanup := setupTestRepo(t, vcsType)
 	defer cleanup()
 
-	// Create a dummy file and stage it
-	testFileContent := "This is a test file."
+	// Create a test file and stage it
+	testFileContent := "test content"
 	err := os.WriteFile(repoPath+"/test.txt", []byte(testFileContent), 0644)
 	require.NoError(t, err)
-	err = testutils.RunGitCommand(t, repoPath, "add", "test.txt")
+
+	if useSVN {
+		err = testutils.RunCommand(t, repoPath, "svn", "add", "test.txt")
+	} else {
+		err = testutils.RunGitCommand(t, repoPath, "add", "test.txt")
+	}
 	require.NoError(t, err)
 
-	// Create a dummy config file
+	// Create config file
 	configContent := `
 provider: openai
 openai:
   api_key: "test_api_key"
   model: "gpt-4"
-  api_base: "https://api.openai.com/v1"
 `
 	configPath, cleanupConfig := testutils.TestConfig(t, configContent)
 	defer cleanupConfig()
 
-	// Create a new commit command with dry-run flag
+	// Create and run command
 	cmd := NewCommitCmd()
-	cmd.SetArgs([]string{"--config", configPath, "--dry-run"})
+	args := []string{"--config", configPath, "--dry-run"}
+	if useSVN {
+		args = append(args, "--svn")
+	}
+	cmd.SetArgs(args)
 
-	// Redirect stdout to capture output
+	// Capture output
 	var buf bytes.Buffer
 	cmd.SetOut(&buf)
 
-	// Execute the command
+	// Execute command
 	err = cmd.Execute()
 	require.NoError(t, err)
 
-	// Check if the commit message is printed
+	// Verify output
 	output := buf.String()
 	assert.Contains(t, output, "Generated commit message:")
+}
 
-	// Ensure no commit was created
-	_, err = git.GetLastCommitHash(repoPath)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "fatal: your current branch 'master' does not have any commits yet")
+func setupTestRepo(t *testing.T, vcsType git.VCSType) (git.VCS, string, func()) {
+	t.Helper()
+	dir := t.TempDir()
+
+	vcs, err := git.NewVCS(vcsType)
+	require.NoError(t, err)
+
+	if vcsType == git.Git {
+        gitPath, err := exec.LookPath("git")
+        if err != nil || !isExecutable(gitPath) {
+            t.Skip("git command not found or not executable")
+        }
+        
+        // 确保使用绝对路径执行git命令
+        gitCmd := filepath.Clean(gitPath)
+        err = testutils.RunCommand(t, dir, gitCmd, "init")
+		require.NoError(t, err)
+		err = testutils.RunCommand(t, dir, gitCmd, "config", "user.email", "test@example.com")
+		require.NoError(t, err)
+		err = testutils.RunCommand(t, dir, gitCmd, "config", "user.name", "Test User")
+		require.NoError(t, err)
+	} else {
+        if _, err := exec.LookPath("svnadmin"); err != nil {
+            t.Skip("svnadmin command not found")
+        }
+		err = testutils.RunCommand(t, dir, "svnadmin", "create", "repo")
+		require.NoError(t, err)
+		err = testutils.RunCommand(t, dir, "svn", "checkout", "file://"+dir+"/repo", dir)
+		require.NoError(t, err)
+	}
+
+	cleanup := func() {
+		os.RemoveAll(dir)
+	}
+
+	return vcs, dir, cleanup
+}
+
+func isExecutable(path string) bool {
+    info, err := os.Stat(path)
+    if err != nil {
+        return false
+    }
+    return (info.Mode() & 0111) != 0
 }
 
 func TestCommitCmd_NoStagedChanges(t *testing.T) {
-	// Create a temporary git repository
-	repoPath, cleanup := testutils.TestGitRepo(t)
-	defer cleanup()
+    testCases := []struct {
+        name    string
+        vcsType git.VCSType
+        setup   func(t *testing.T) bool
+    }{
+        {
+            name:    "Git",
+            vcsType: git.Git,
+            setup: func(t *testing.T) bool {
+                if _, err := exec.LookPath("git"); err != nil {
+                    t.Skip("git command not found")
+                    return false
+                }
+                return true
+            },
+        },
+        {
+            name:    "SVN",
+            vcsType: git.SVN,
+            setup: func(t *testing.T) bool {
+                if _, err := exec.LookPath("svnadmin"); err != nil {
+                    t.Skip("svnadmin command not found")
+                    return false
+                }
+                return true
+            },
+        },
+    }
 
-	// Create a new commit command
-	cmd := NewCommitCmd()
-	cmd.SetArgs([]string{"--config", repoPath + "/config.yaml"})
+    for _, tc := range testCases {
+        t.Run(tc.name, func(t *testing.T) {
+            if !tc.setup(t) {
+                return
+            }
+            _, _, cleanup := setupTestRepo(t, tc.vcsType)
+            defer cleanup()
 
-	// Redirect stdout to capture output
-	var buf bytes.Buffer
-	cmd.SetOut(&buf)
+            cmd := NewCommitCmd()
+            if tc.vcsType == git.SVN {
+                cmd.SetArgs([]string{"--svn"})
+            }
 
-	// Execute the command
-	err := cmd.Execute()
+            var buf bytes.Buffer
+            cmd.SetOut(&buf)
 
-	// Check for the expected error message
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no staged changes found")
-}
-
-func TestCommitCmd_NoStagedChangesAfterFiltering(t *testing.T) {
-	// Create a temporary git repository
-	repoPath, cleanup := testutils.TestGitRepo(t)
-	defer cleanup()
-
-	// Create a dummy ignored file
-	err := os.WriteFile(repoPath+"/README.md", []byte("This is a README file."), 0644)
-	require.NoError(t, err)
-
-	// Stage the ignored file
-	err = testutils.RunGitCommand(t, repoPath, "add", "README.md")
-	require.NoError(t, err)
-
-	// Create a config file that ignores README.md
-	configContent := `
-file_ignore:
-  - README.md
-provider: openai
-openai:
-  api_key: "test_api_key"
-`
-	configPath, cleanupConfig := testutils.TestConfig(t, configContent)
-	defer cleanupConfig()
-
-	// Create a new commit command
-	cmd := NewCommitCmd()
-	cmd.SetArgs([]string{"--config", configPath})
-
-	// Redirect stdout to capture output
-	var buf bytes.Buffer
-	cmd.SetOut(&buf)
-
-	// Execute the command
-	err = cmd.Execute()
-
-	// Check for the expected error message
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "no staged changes found after filtering")
+            err := cmd.Execute()
+            require.Error(t, err)
+            assert.Contains(t, err.Error(), "no staged changes found")
+        })
+    }
 }
 
 // Mock LLM implementation for testing

@@ -105,3 +105,12 @@ func RunGitCommand(t *testing.T, dir string, args ...string) error {
 	}
 	return err
 }
+
+// RunCommand executes any command and returns the result
+func RunCommand(t *testing.T, dir string, name string, args ...string) error {
+	t.Helper()
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	cmd.Env = os.Environ()
+	return cmd.Run()
+}
