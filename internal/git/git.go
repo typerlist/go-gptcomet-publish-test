@@ -218,38 +218,12 @@ func (g *GitVCS) GetCommitInfo(repoPath string, commitHash string) (string, erro
 		}
 		commitHash = hash
 	}
+	commitHash = strings.TrimSpace(commitHash)
 
-	cmd := exec.Command("git", "log", "-1", "--stat", commitHash, "--pretty=format:Author: %an <%ae>%n%D(%H)%n%n%s%n")
-	output, err := g.runCommand(cmd, repoPath)
-	if err != nil {
-		return "", err
-	}
-	branch, err := g.GetCurrentBranch(repoPath)
-	if err != nil {
-		return "", err
-	}
-	lines := strings.Split(output, "\n")
-	if len(lines) > 1 {
-		// Replace the second line (which contains ref info) with just the branch name
-		lines[1] = strings.Split(lines[1], "(")[0] + lines[1][strings.LastIndex(lines[1], "("):]
-		lines[1] = branch + lines[1][strings.LastIndex(lines[1], "("):]
-
-		// Add colors to the stats
-		for i := 4; i < len(lines); i++ {
-			line := lines[i]
-			if strings.Contains(line, "|") {
-				parts := strings.Split(line, "|")
-				if len(parts) == 2 {
-					stats := strings.TrimSpace(parts[1])
-					coloredStats := strings.ReplaceAll(stats, "+", colorGreen+"+")
-					coloredStats = strings.ReplaceAll(coloredStats, "-", colorReset+colorRed+"-")
-					lines[i] = parts[0] + "| " + coloredStats + colorReset
-				}
-			}
-		}
-		output = strings.Join(lines, "\n")
-	}
-	return output, nil
+	cmd := exec.Command("git", "log", "-1", "--stat",
+		"--pretty=format:Author: %an <%ae>%n%D(%H)%n%n%s%n",
+		commitHash)
+	return g.runCommand(cmd, repoPath)
 }
 
 // GetLastCommitHash returns the hash of the last commit
@@ -280,6 +254,7 @@ func (g *GitVCS) CreateCommit(repoPath string, message string) error {
 
 // runCommand 执行命令并返回输出
 func (g *GitVCS) runCommand(cmd *exec.Cmd, repoPath string) (string, error) {
+	debug.Printf("Running command: %v", cmd.Args)
 	cmd.Dir = repoPath
 
 	var stdout, stderr bytes.Buffer
