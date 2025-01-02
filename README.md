@@ -2,26 +2,35 @@
 <!-- TOC -->
 
 - [GPTComet](#gptcomet)
-    - [Description](#description)
-    - [See Also](#see-also)
-    - [Features](#features)
-    - [Installation](#installation)
-        - [Prerequisites](#prerequisites)
-        - [Build from Source](#build-from-source)
-    - [Usage](#usage)
-        - [Basic Usage](#basic-usage)
-        - [Using a specific language](#using-a-specific-language)
-        - [Dry Run](#dry-run)
-        - [Configuring a New Provider](#configuring-a-new-provider)
-        - [Managing Configuration](#managing-configuration)
-        - [Generating Rich Commit Messages](#generating-rich-commit-messages)
-    - [Configuration](#configuration)
-        - [Supported Configuration Keys](#supported-configuration-keys)
-    - [Contribution](#contribution)
-    - [Testing](#testing)
-    - [License](#license)
-    - [Acknowledgements](#acknowledgements)
+  - [Description](#description)
+  - [See Also](#see-also)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [Release](#release)
+    - [Build](#build)
+      - [Prerequisites](#prerequisites)
+      - [Build from Source](#build-from-source)
+  - [Setup](#setup)
+    - [Configuration Methods](#configuration-methods)
+    - [Setup Guide](#setup-guide)
+  - [Usage](#usage)
+    - [Basic Usage](#basic-usage)
+    - [Using a specific language](#using-a-specific-language)
+    - [Dry Run](#dry-run)
+    - [SVN](#svn)
+    - [Configuring a New Provider](#configuring-a-new-provider)
+    - [Managing Configuration](#managing-configuration)
+    - [Generating Rich Commit Messages](#generating-rich-commit-messages)
+  - [Configuration](#configuration)
+    - [Supported Configuration Keys](#supported-configuration-keys)
+  - [Contribution](#contribution)
+  - [Testing](#testing)
+  - [License](#license)
+  - [Acknowledgements](#acknowledgements)
 
+<!-- /TOC -->
+<!-- /TOC -->
+<!-- /TOC -->
 <!-- /TOC -->
 ## Description
 
@@ -41,14 +50,33 @@ Python version: https://github.com/belingud/gptcomet
 -   **Flexible Configuration:** Manage settings through a YAML configuration file, supporting options like API keys, models, output language, and more.
 -   **Dry Run Mode:** Preview the generated commit message without actually creating a commit.
 -   **Rich Commit Messages:**  Generate detailed commit messages with a title, summary, and bullet points describing the changes when using the `--rich` flag.
+-   **SVN Support:** Support for working with SVN repositories, allowing for commit messages that include changes from both Git and SVN repositories.
 
 ## Installation
 
-### Prerequisites
+### Release
+
+You can install by install script:
+
+```bash
+curl -sSL https://raw.githubusercontent.com/belingud/go-gptcomet/refs/heads/master/install.sh | bash
+```
+
+Windows:
+
+```powershell
+irm https://raw.githubusercontent.com/belingud/go-gptcomet/refs/heads/master/install.ps1 | iex
+```
+
+Or download from [Releases](https://github.com/belingud/go-gptcomet/releases).
+
+### Build
+
+#### Prerequisites
 
 -   Go (version 1.18 or later)
 
-### Build from Source
+#### Build from Source
 
 1. Clone the repository:
     ```bash
@@ -60,6 +88,63 @@ Python version: https://github.com/belingud/gptcomet
     go build -o gptcomet .
     ```
 3. (Optional) Move the `gptcomet` binary to a directory in your `PATH` for easy access.
+
+## Setup
+
+### Configuration Methods
+
+1. **Direct Configuration**
+   - Configure directly in `~/.config/gptcomet/gptcomet.yaml`.
+
+2. **Interactive Setup**
+   - Use the `gmsg newprovider` command for guided setup.
+
+### Setup Guide
+
+```bash
+./gptcomet newprovider
+
+    Select Provider           
+                              
+  > 1. azure                  
+    2. chatglm                
+    3. claude                 
+    4. cohere                 
+    5. deepseek               
+    6. gemini                 
+    7. kimi                   
+    8. mistral                
+    9. ollama                 
+    10. openai                
+    11. sambanova             
+    12. silicon               
+    13. tongyi                
+    14. vertex                
+    15. xai                   
+    16. Input Manually        
+                              
+    ↑/k up • ↓/j down • ? more
+```
+
+Select the provider you want to configure. Then enter the API base, API key, max tokens and model name. Some provider need you input more information.
+
+```bash
+gmsg newprovider
+Selected provider: silicon
+Configure provider:
+
+Previous inputs:
+  Enter Silicon API base: https://api.siliconflow.cn/v1
+  Enter API key: sk-awz*********************************************
+  Enter max tokens: 1024
+
+Enter Enter model name (default: Qwen/Qwen2.5-7B-Instruct):
+> Qwen/Qwen2.5-7B-Instruct                 
+
+Provider silicon already has a configuration. Do you want to overwrite it? (y/N): y
+
+Provider silicon configured successfully!
+```
 
 ## Usage
 
@@ -89,6 +174,14 @@ To preview the generated commit message without committing, use the `--dry-run` 
 
 ```bash
 ./gptcomet commit --dry-run
+```
+
+### SVN
+
+To use SVN instead of Git, set the `--svn` flag:
+
+```bash
+./gptcomet commit --svn
 ```
 
 ### Configuring a New Provider
