@@ -11,6 +11,9 @@ import (
 	"github.com/belingud/go-gptcomet/internal/debug"
 )
 
+// GitVCS implements the VCS interface for Git
+type GitVCS struct{}
+
 const (
 	colorReset = "\033[0m"
 	colorRed   = "\033[31m"
@@ -26,37 +29,9 @@ const (
 // Returns:
 //   - A string containing the filtered diff output.
 //   - An error if the command fails or if the specified path is not a git repository.
-func GetDiff(repoPath string) (string, error) {
+func (g *GitVCS) GetDiff(repoPath string) (string, error) {
 	cmd := exec.Command("git", "diff", "--staged", "-U2")
-	cmd.Dir = repoPath
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	output, err := cmd.Output()
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			if exitError.ExitCode() == 128 {
-				return "", fmt.Errorf("not a git repository (or any of the parent directories): %w\nGit output: %s", err, stderr.String())
-			} else {
-				return "", fmt.Errorf("git diff command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
-			}
-		}
-		return "", fmt.Errorf("failed to get diff: %w\nGit output: %s", err, stderr.String())
-	}
-
-	// Filter out index, ---, and +++ lines
-	lines := strings.Split(strings.TrimSpace(string(output)), "\n")
-	filteredLines := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if !strings.HasPrefix(line, "index") &&
-			!strings.HasPrefix(line, "---") &&
-			!strings.HasPrefix(line, "+++") {
-			filteredLines = append(filteredLines, line)
-		}
-	}
-
-	return strings.Join(filteredLines, "\n"), nil
+	return g.runCommand(cmd, repoPath)
 }
 
 // HasStagedChanges checks if there are any staged changes in the git repository at the given path.
@@ -73,7 +48,7 @@ func GetDiff(repoPath string) (string, error) {
 // The function returns true if the git diff command exits with code 1 (staged changes present),
 // false if it exits with code 0 (no staged changes), and an error for any other exit code or
 // if the command fails to execute.
-func HasStagedChanges(repoPath string) (bool, error) {
+func (g *GitVCS) HasStagedChanges(repoPath string) (bool, error) {
 	cmd := exec.Command("git", "diff", "--staged", "--quiet")
 	cmd.Dir = repoPath
 
@@ -110,7 +85,7 @@ func HasStagedChanges(repoPath string) (bool, error) {
 //
 // The function will return (nil, nil) if there are no staged files in the repository.
 // If the git command fails, it returns a detailed error message including the exit code.
-func GetStagedFiles(repoPath string) ([]string, error) {
+func (g *GitVCS) GetStagedFiles(repoPath string) ([]string, error) {
 	cmd := exec.Command("git", "diff", "--staged", "--name-only")
 	cmd.Dir = repoPath
 
@@ -157,9 +132,9 @@ func ShouldIgnoreFile(file string, ignorePatterns []string) bool {
 //
 // The function will return an empty string if there are no staged files in the repository.
 // If the git command fails, it returns a detailed error message including the exit code.
-func GetStagedDiffFiltered(repoPath string, cfgManager *config.Manager) (string, error) {
+func (g *GitVCS) GetStagedDiffFiltered(repoPath string, cfgManager *config.Manager) (string, error) {
 	// First get staged files
-	files, err := GetStagedFiles(repoPath)
+	files, err := g.GetStagedFiles(repoPath)
 	debug.Printf("Staged files: %v", files)
 	if err != nil {
 		return "", err
@@ -219,22 +194,9 @@ func GetStagedDiffFiltered(repoPath string, cfgManager *config.Manager) (string,
 // Returns:
 //   - string: The name of the current branch
 //   - error: An error if the git command fails or if there are issues accessing the repository
-func GetCurrentBranch(repoPath string) (string, error) {
+func (g *GitVCS) GetCurrentBranch(repoPath string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
-	cmd.Dir = repoPath
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
-		}
-		return "", fmt.Errorf("failed to get current branch: %w\nGit output: %s", err, stderr.String())
-	}
-
-	return strings.TrimSpace(stdout.String()), nil
+	return g.runCommand(cmd, repoPath)
 }
 
 // GetCommitInfo returns formatted information about the commit
@@ -247,10 +209,10 @@ func GetCurrentBranch(repoPath string) (string, error) {
 // Returns:
 //   - string: The formatted commit info
 //   - error: An error if the git command fails or if there are issues accessing the repository
-func GetCommitInfo(repoPath string, commitHash string) (string, error) {
+func (g *GitVCS) GetCommitInfo(repoPath string, commitHash string) (string, error) {
 	if commitHash == "" {
 		// Get last commit hash
-		hash, err := GetLastCommitHash(repoPath)
+		hash, err := g.GetLastCommitHash(repoPath)
 		if err != nil {
 			return "", err
 		}
@@ -258,27 +220,14 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 	}
 
 	cmd := exec.Command("git", "log", "-1", "--stat", commitHash, "--pretty=format:Author: %an <%ae>%n%D(%H)%n%n%s%n")
-	cmd.Dir = repoPath
-
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	if err := cmd.Run(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git log command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
-		}
-		return "", fmt.Errorf("failed to get commit info: %w\nGit output: %s", err, stderr.String())
-	}
-
-	// Get branch name
-	branch, err := GetCurrentBranch(repoPath)
+	output, err := g.runCommand(cmd, repoPath)
 	if err != nil {
-		return "", fmt.Errorf("failed to get branch name: %w", err)
+		return "", err
 	}
-
-	// Replace the ref info with just the branch name and add colors
-	output := stdout.String()
+	branch, err := g.GetCurrentBranch(repoPath)
+	if err != nil {
+		return "", err
+	}
 	lines := strings.Split(output, "\n")
 	if len(lines) > 1 {
 		// Replace the second line (which contains ref info) with just the branch name
@@ -300,7 +249,6 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 		}
 		output = strings.Join(lines, "\n")
 	}
-
 	return output, nil
 }
 
@@ -311,21 +259,9 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 // Returns:
 //   - string: The hash of the last commit
 //   - error: An error if the git command fails or if there are issues accessing the repository
-func GetLastCommitHash(repoPath string) (string, error) {
+func (g *GitVCS) GetLastCommitHash(repoPath string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
-	cmd.Dir = repoPath
-
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	output, err := cmd.Output()
-	if err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
-		}
-		return "", fmt.Errorf("failed to get last commit hash: %w\nGit output: %s", err, stderr.String())
-	}
-	return strings.TrimSpace(string(output)), nil
+	return g.runCommand(cmd, repoPath)
 }
 
 // CreateCommit creates a git commit with the given message
@@ -336,19 +272,24 @@ func GetLastCommitHash(repoPath string) (string, error) {
 //
 // Returns:
 //   - error: An error if the git command fails or if there are issues accessing the repository
-func CreateCommit(repoPath string, message string) error {
+func (g *GitVCS) CreateCommit(repoPath string, message string) error {
 	cmd := exec.Command("git", "commit", "-m", message)
+	_, err := g.runCommand(cmd, repoPath)
+	return err
+}
+
+// runCommand 执行命令并返回输出
+func (g *GitVCS) runCommand(cmd *exec.Cmd, repoPath string) (string, error) {
 	cmd.Dir = repoPath
 
-	var stderr bytes.Buffer
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	if err := cmd.Run(); err != nil {
-		if exitError, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("git commit command failed with exit code %d: %w", exitError.ExitCode(), err)
-		}
-		return fmt.Errorf("failed to create commit: %s, %w", stderr.String(), err)
+	err := cmd.Run()
+	if err != nil {
+		return "", fmt.Errorf("command failed: %w\nOutput: %s", err, stderr.String())
 	}
 
-	return nil
+	return stdout.String(), nil
 }

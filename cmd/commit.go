@@ -112,6 +112,7 @@ func NewCommitCmd() *cobra.Command {
 		repoPath string
 		rich     bool
 		dryRun   bool
+		useSVN   bool
 	)
 
 	cmd := &cobra.Command{
@@ -127,8 +128,24 @@ func NewCommitCmd() *cobra.Command {
 			}
 			debug.Printf("Using repository path: %s", repoPath)
 
+			if rich {
+				debug.Println("Using rich output")
+			}
+
+			// Create VCS instance based on flag
+			vcsType := git.Git
+			if useSVN {
+				vcsType = git.SVN
+			}
+			
+			vcs, err := git.NewVCS(vcsType)
+			if err != nil {
+				return fmt.Errorf("failed to create VCS (%s): %w", vcsType, err)
+			}
+			debug.Printf("Using VCS: %s", vcsType)
+
 			// Check for staged changes
-			hasStagedChanges, err := git.HasStagedChanges(repoPath)
+			hasStagedChanges, err := vcs.HasStagedChanges(repoPath)
 			if err != nil {
 				return fmt.Errorf("failed to check staged changes: %w", err)
 			}
@@ -150,7 +167,7 @@ func NewCommitCmd() *cobra.Command {
 			}
 
 			// Get filtered diff
-			diff, err := git.GetStagedDiffFiltered(repoPath, cfgManager)
+			diff, err := vcs.GetStagedDiffFiltered(repoPath, cfgManager)
 			if err != nil {
 				return fmt.Errorf("failed to get diff: %w", err)
 			}
@@ -227,19 +244,19 @@ func NewCommitCmd() *cobra.Command {
 				switch answer {
 				case "y", "yes":
 					// Create commit
-					err = git.CreateCommit(repoPath, commitMsg)
+					err = vcs.CreateCommit(repoPath, commitMsg)
 					if err != nil {
 						return fmt.Errorf("failed to create commit: %w", err)
 					}
 
 					// Get commit hash
-					commitHash, err := git.GetLastCommitHash(repoPath)
+					commitHash, err := vcs.GetLastCommitHash(repoPath)
 					if err != nil {
 						return fmt.Errorf("failed to get commit hash: %w", err)
 					}
 
 					// Get commit info
-					commitInfo, err := git.GetCommitInfo(repoPath, commitHash)
+					commitInfo, err := vcs.GetCommitInfo(repoPath, commitHash)
 					if err != nil {
 						return fmt.Errorf("failed to get commit info: %w", err)
 					}
@@ -271,6 +288,7 @@ func NewCommitCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&repoPath, "config", "c", "", "Config path")
 	cmd.Flags().BoolVarP(&rich, "rich", "r", false, "Generate rich commit message with details")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print the generated commit message and exit without committing")
+	cmd.Flags().BoolVar(&useSVN, "svn", false, "Use SVN instead of Git")
 
 	return cmd
 }
