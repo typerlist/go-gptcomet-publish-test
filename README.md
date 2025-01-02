@@ -28,7 +28,7 @@
   - [License](#license)
   - [Acknowledgements](#acknowledgements)
 
-<img src="artwork/commit.gif" alt="Made with VHS" width="600" height="595">
+<img src="artwork/commit.gif" alt="Made with VHS" width="750" height="550">
 
 ## Description
 
