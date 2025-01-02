@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/belingud/go-gptcomet/internal/config"
 	"github.com/belingud/go-gptcomet/internal/debug"
@@ -11,6 +12,7 @@ import (
 	"github.com/belingud/go-gptcomet/pkg/types"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 )
 
 func NewProviderCmd() *cobra.Command {
@@ -83,10 +85,37 @@ func NewProviderCmd() *cobra.Command {
 				return fmt.Errorf("failed to create config manager: %w", err)
 			}
 
+			// Check if provider config already exists
+			existingConfig, _ := cfgManager.Get(providerName)
+			if existingConfig != nil {
+				fmt.Printf("Provider %s already has a configuration. Do you want to overwrite it? (y/N): ", providerName)
+
+				// Use term package to read input
+				oldState, err := term.MakeRaw(int(os.Stdin.Fd()))
+				if err != nil {
+					return fmt.Errorf("failed to set terminal to raw mode: %w", err)
+				}
+				defer term.Restore(int(os.Stdin.Fd()), oldState)
+
+				reader := term.NewTerminal(os.Stdin, "")
+				response, err := reader.ReadLine()
+				if err != nil {
+					return fmt.Errorf("failed to read input: %w", err)
+				}
+				response = strings.TrimSpace(response)
+				if strings.ToLower(response) != "y" {
+					fmt.Println("Configuration cancelled.")
+					return nil
+				}
+			}
+
 			// Update config
 			if err := cfgManager.UpdateProviderConfig(providerName, configs); err != nil {
 				return fmt.Errorf("failed to update provider config: %w", err)
 			}
+
+			// Update new provider
+			cfgManager.Set("provider", providerName)
 
 			fmt.Printf("\nProvider %s configured successfully!\n", providerName)
 			return nil
