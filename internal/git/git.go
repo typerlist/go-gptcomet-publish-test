@@ -30,16 +30,19 @@ func GetDiff(repoPath string) (string, error) {
 	cmd := exec.Command("git", "diff", "--staged", "-U2")
 	cmd.Dir = repoPath
 
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	output, err := cmd.Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			if exitError.ExitCode() == 128 {
-				return "", fmt.Errorf("not a git repository (or any of the parent directories): %w", err)
+				return "", fmt.Errorf("not a git repository (or any of the parent directories): %w\nGit output: %s", err, stderr.String())
 			} else {
-				return "", fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
+				return "", fmt.Errorf("git diff command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
 			}
 		}
-		return "", fmt.Errorf("failed to get diff: %w", err)
+		return "", fmt.Errorf("failed to get diff: %w\nGit output: %s", err, stderr.String())
 	}
 
 	// Filter out index, ---, and +++ lines
@@ -74,6 +77,9 @@ func HasStagedChanges(repoPath string) (bool, error) {
 	cmd := exec.Command("git", "diff", "--staged", "--quiet")
 	cmd.Dir = repoPath
 
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	err := cmd.Run()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
@@ -81,10 +87,10 @@ func HasStagedChanges(repoPath string) (bool, error) {
 			if exitError.ExitCode() == 1 {
 				return true, nil
 			} else {
-				return false, fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
+				return false, fmt.Errorf("git diff command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
 			}
 		}
-		return false, fmt.Errorf("failed to check staged changes: %w", err)
+		return false, fmt.Errorf("failed to check staged changes: %w\nGit output: %s", err, stderr.String())
 	}
 
 	// Exit code 0 means no staged changes
@@ -108,12 +114,15 @@ func GetStagedFiles(repoPath string) ([]string, error) {
 	cmd := exec.Command("git", "diff", "--staged", "--name-only")
 	cmd.Dir = repoPath
 
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	output, err := cmd.Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
+			return nil, fmt.Errorf("git diff command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
 		}
-		return nil, fmt.Errorf("failed to get staged files: %w", err)
+		return nil, fmt.Errorf("failed to get staged files: %w\nGit output: %s", err, stderr.String())
 	}
 
 	files := strings.Split(strings.TrimSpace(string(output)), "\n")
@@ -187,12 +196,15 @@ func GetStagedDiffFiltered(repoPath string, cfgManager *config.Manager) (string,
 	cmd := exec.Command("git", args...)
 	cmd.Dir = repoPath
 
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	output, err := cmd.Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git diff command failed with exit code %d: %w", exitError.ExitCode(), err)
+			return "", fmt.Errorf("git diff command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
 		}
-		return "", fmt.Errorf("failed to get diff: %w", err)
+		return "", fmt.Errorf("failed to get diff: %w\nGit output: %s", err, stderr.String())
 	}
 
 	return string(output), nil
@@ -211,17 +223,18 @@ func GetCurrentBranch(repoPath string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "--abbrev-ref", "HEAD")
 	cmd.Dir = repoPath
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w", exitError.ExitCode(), err)
+			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
 		}
-		return "", fmt.Errorf("failed to get current branch: %w", err)
+		return "", fmt.Errorf("failed to get current branch: %w\nGit output: %s", err, stderr.String())
 	}
 
-	return strings.TrimSpace(out.String()), nil
+	return strings.TrimSpace(stdout.String()), nil
 }
 
 // GetCommitInfo returns formatted information about the commit
@@ -247,14 +260,15 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 	cmd := exec.Command("git", "log", "-1", "--stat", commitHash, "--pretty=format:Author: %an <%ae>%n%D(%H)%n%n%s%n")
 	cmd.Dir = repoPath
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
 	if err := cmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git log command failed with exit code %d: %w", exitError.ExitCode(), err)
+			return "", fmt.Errorf("git log command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
 		}
-		return "", fmt.Errorf("failed to get commit info: %w", err)
+		return "", fmt.Errorf("failed to get commit info: %w\nGit output: %s", err, stderr.String())
 	}
 
 	// Get branch name
@@ -264,7 +278,7 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 	}
 
 	// Replace the ref info with just the branch name and add colors
-	output := out.String()
+	output := stdout.String()
 	lines := strings.Split(output, "\n")
 	if len(lines) > 1 {
 		// Replace the second line (which contains ref info) with just the branch name
@@ -300,12 +314,16 @@ func GetCommitInfo(repoPath string, commitHash string) (string, error) {
 func GetLastCommitHash(repoPath string) (string, error) {
 	cmd := exec.Command("git", "rev-parse", "HEAD")
 	cmd.Dir = repoPath
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
 	output, err := cmd.Output()
 	if err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
-			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w", exitError.ExitCode(), err)
+			return "", fmt.Errorf("git rev-parse command failed with exit code %d: %w\nGit output: %s", exitError.ExitCode(), err, stderr.String())
 		}
-		return "", fmt.Errorf("failed to get last commit hash: %w", err)
+		return "", fmt.Errorf("failed to get last commit hash: %w\nGit output: %s", err, stderr.String())
 	}
 	return strings.TrimSpace(string(output)), nil
 }
