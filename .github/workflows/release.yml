@@ -150,5 +150,6 @@ jobs:
           PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           echo "Publishing to PyPI"
+          echo "PDM_PUBLISH_USERNAME=${{ secrets.PYPI_API_TOKEN }}"
           ls -alh dist
           pdm publish --repository testpypi --no-build
