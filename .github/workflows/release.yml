@@ -77,7 +77,7 @@ jobs:
 
           if [[ "${{ matrix.os }}" == "windows" ]]; then
             ASSET_NAME="gptcomet_${{ env.VERSION }}_${{ matrix.os }}_${BINARY_ARCH}.zip"
-            EXTRACT_CMD="unzip"
+            EXTRACT_CMD="unzip -o"
           else
             ASSET_NAME="gptcomet_${{ env.VERSION }}_${{ matrix.os }}_${BINARY_ARCH}.tar.gz"
             EXTRACT_CMD="tar xzf"
