@@ -64,10 +64,13 @@ jobs:
         run: |
           echo "PACKAGE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+          echo "Set PACKAGE_VERSION=${GITHUB_REF#refs/tags/} and VERSION=${GITHUB_REF#refs/tags/v}"
+          ls -alh
       
       - name: Download release binary
         shell: bash
         run: |
+          echo "Downloading release binary for OS=${{ matrix.os }} ARCH=${{ matrix.arch }}"
           # Convert arch name
           if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
             BINARY_ARCH="amd64"
@@ -83,6 +86,7 @@ jobs:
             EXTRACT_CMD="tar xzf"
           fi
           
+          echo "ASSET_NAME=${ASSET_NAME}"
           ASSET_URL=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.PACKAGE_VERSION }} | \
             jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')
           
@@ -91,14 +95,18 @@ jobs:
             exit 1
           fi
           
+          echo "Downloading from $ASSET_URL"
           curl -L -o binary.archive $ASSET_URL
           mkdir -p py/gptcomet/bin
+          echo "Extracting binary.archive using $EXTRACT_CMD"
           $EXTRACT_CMD binary.archive
+          ls -alh py/gptcomet/bin
           if [[ "${{ matrix.os }}" == "windows" ]]; then
             mv gptcomet.exe py/gptcomet/bin/
           else
             mv gptcomet py/gptcomet/bin/
           fi
+          ls -alh py/gptcomet/bin
           
           # Set platform tag for wheel
           platform=""
@@ -118,17 +126,27 @@ jobs:
             fi
           fi
           echo "PLATFORM=${platform}" >> $GITHUB_ENV
+          echo "Set PLATFORM=${platform}"
+          ls -alh
       
       - name: Install dependencies
         run: |
+          echo "Installing dependencies"
           python -m pip install --upgrade pip
-          pip install pdm
+          pip install cibuildwheel==2.10.0 twine
+          ls -alh
+      
+      - name: Build package
+        run: |
+          echo "Building package with cibuildwheel"
+          cibuildwheel --output-dir dist
+          ls -alh dist
       
       - name: Publish to PyPI
-        if: success()
         env:
-          PDM_PUBLISH_USERNAME: __token__
-          PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          pdm build --platform ${{ env.PLATFORM }}
-          pdm publish --repository pypi-test --no-verify
+          echo "Publishing to PyPI"
+          ls -alh dist
+          twine upload --repository-url https://test.pypi.org/legacy/ dist/*
