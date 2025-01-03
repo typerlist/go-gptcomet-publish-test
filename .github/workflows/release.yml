@@ -71,7 +71,7 @@ jobs:
         shell: bash
         run: |
           echo "Downloading release binary for OS=${{ matrix.os }} ARCH=${{ matrix.arch }}"
-          # Convert arch name
+          # Convert arch name for asset download
           if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
             BINARY_ARCH="amd64"
           else
@@ -102,9 +102,11 @@ jobs:
           $EXTRACT_CMD binary.archive
           ls -alh py/gptcomet/bin
           if [[ "${{ matrix.os }}" == "windows" ]]; then
-            mv gptcomet.exe py/gptcomet/bin/
-          else
-            mv gptcomet py/gptcomet/bin/
+            mv gptcomet.exe "py/gptcomet/bin/gptcomet_${{ matrix.arch }}.exe"
+          elif [[ "${{ matrix.os }}" == "darwin" ]]; then
+            mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_mac"
+          elif [[ "${{ matrix.os }}" == "linux" ]]; then
+            mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_linux"
           fi
           ls -alh py/gptcomet/bin
           
@@ -139,7 +141,7 @@ jobs:
       - name: Build package
         run: |
           echo "Building package with pdm"
-          pdm build
+          pdm build --no-sdist
           ls -alh dist
       
       - name: Publish to PyPI
@@ -149,4 +151,4 @@ jobs:
         run: |
           echo "Publishing to PyPI"
           ls -alh dist
-          pdm publish --repository testpypi --no-build --no-verify dist/*
+          pdm publish --repository testpypi --no-build dist/*
