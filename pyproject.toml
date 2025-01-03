@@ -1,6 +1,6 @@
 [project]
 name = "gptcomet"
-version = "0.1.5"
+version = "0.1.6"
 description = "GPTComet: AI-Powered Git Commit Message Generator."
 authors = [{ name = "belingud", email = "im.victor@qq.com" }]
 dependencies = []
@@ -60,6 +60,9 @@ platforms = [
     "macos_x86_64",
     "macos_arm64",
 ]
+
+[tool.pdm.scripts]
+bump = "bump2version"
 
 [dependency-groups]
 dev = [
