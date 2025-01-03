@@ -113,6 +113,7 @@ func NewCommitCmd() *cobra.Command {
 		rich     bool
 		dryRun   bool
 		useSVN   bool
+		autoYes  bool
 	)
 
 	cmd := &cobra.Command{
@@ -137,7 +138,7 @@ func NewCommitCmd() *cobra.Command {
 			if useSVN {
 				vcsType = git.SVN
 			}
-			
+
 			vcs, err := git.NewVCS(vcsType)
 			if err != nil {
 				return fmt.Errorf("failed to create VCS (%s): %w", vcsType, err)
@@ -228,13 +229,19 @@ func NewCommitCmd() *cobra.Command {
 				if dryRun {
 					return nil
 				}
+				var answer string
+				if autoYes {
+					// Automatically commit without asking
+					answer = "y"
+				} else {
 
-				fmt.Print("\nWould you like to create this commit? ([Y]es/[n]o/[r]etry/[e]dit): ")
-				answer, err := reader.ReadString('\n')
-				if err != nil {
-					return fmt.Errorf("failed to read answer: %w", err)
+					fmt.Print("\nWould you like to create this commit? ([Y]es/[n]o/[r]etry/[e]dit): ")
+					answer, err = reader.ReadString('\n')
+					if err != nil {
+						return fmt.Errorf("failed to read answer: %w", err)
+					}
+					answer = strings.ToLower(strings.TrimSpace(answer))
 				}
-				answer = strings.ToLower(strings.TrimSpace(answer))
 
 				// If empty answer, use default (yes)
 				if answer == "" {
@@ -287,6 +294,7 @@ func NewCommitCmd() *cobra.Command {
 
 	cmd.Flags().StringVarP(&repoPath, "config", "c", "", "Config path")
 	cmd.Flags().BoolVarP(&rich, "rich", "r", false, "Generate rich commit message with details")
+	cmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically commit without asking")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "Print the generated commit message and exit without committing")
 	cmd.Flags().BoolVar(&useSVN, "svn", false, "Use SVN instead of Git")
 
