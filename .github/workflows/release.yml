@@ -40,8 +40,17 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
-        os: [linux, windows, darwin]
-        arch: [x86_64, arm64]
+        include:
+          - os: linux
+            arch: x86_64
+          - os: linux
+            arch: arm64
+          - os: darwin
+            arch: x86_64
+          - os: darwin
+            arch: arm64
+          - os: windows
+            arch: x86_64
 
     steps:
       - uses: actions/checkout@v3
@@ -59,7 +68,14 @@ jobs:
       - name: Download release binary
         shell: bash
         run: |
-          ASSET_NAME="gptcomet_${{ matrix.os }}_${{ matrix.arch }}.tar.gz"
+          if [[ "${{ matrix.os }}" == "windows" ]]; then
+            ASSET_NAME="gptcomet_${{ matrix.os }}_${{ matrix.arch }}.zip"
+            EXTRACT_CMD="unzip"
+          else
+            ASSET_NAME="gptcomet_${{ matrix.os }}_${{ matrix.arch }}.tar.gz"
+            EXTRACT_CMD="tar xzf"
+          fi
+          
           ASSET_URL=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.PACKAGE_VERSION }} | \
             jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')
           
@@ -68,9 +84,9 @@ jobs:
             exit 1
           fi
           
-          curl -L -o binary.tar.gz $ASSET_URL
+          curl -L -o binary.archive $ASSET_URL
           mkdir -p py/gptcomet/bin
-          tar xzf binary.tar.gz
+          $EXTRACT_CMD binary.archive
           if [[ "${{ matrix.os }}" == "windows" ]]; then
             mv gptcomet.exe py/gptcomet/bin/
           else
@@ -86,11 +102,7 @@ jobs:
               platform="linux_aarch64"
             fi
           elif [[ "${{ matrix.os }}" == "windows" ]]; then
-            if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
-              platform="win_amd64"
-            else
-              platform="win_arm64"
-            fi
+            platform="win_amd64"
           elif [[ "${{ matrix.os }}" == "darwin" ]]; then
             if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
               platform="macos_x86_64"
