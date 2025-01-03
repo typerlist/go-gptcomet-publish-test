@@ -139,7 +139,7 @@ jobs:
       - name: Build package
         run: |
           echo "Building package with cibuildwheel"
-          CIBW_REPAIR_WHEEL_COMMAND="echo 'Skipping auditwheel repair'" cibuildwheel --output-dir dist
+          CIBW_REPAIR_WHEEL_COMMAND="echo 'Skipping auditwheel repair' && mkdir -p /output && echo 'No files to move'" cibuildwheel --output-dir dist
           ls -alh dist
       
       - name: Publish to PyPI
