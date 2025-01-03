@@ -68,11 +68,18 @@ jobs:
       - name: Download release binary
         shell: bash
         run: |
+          # Convert arch name
+          if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
+            BINARY_ARCH="amd64"
+          else
+            BINARY_ARCH="arm64"
+          fi
+
           if [[ "${{ matrix.os }}" == "windows" ]]; then
-            ASSET_NAME="gptcomet_${{ matrix.os }}_${{ matrix.arch }}.zip"
+            ASSET_NAME="gptcomet_${{ env.VERSION }}_${{ matrix.os }}_${BINARY_ARCH}.zip"
             EXTRACT_CMD="unzip"
           else
-            ASSET_NAME="gptcomet_${{ matrix.os }}_${{ matrix.arch }}.tar.gz"
+            ASSET_NAME="gptcomet_${{ env.VERSION }}_${{ matrix.os }}_${BINARY_ARCH}.tar.gz"
             EXTRACT_CMD="tar xzf"
           fi
           
