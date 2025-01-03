@@ -109,7 +109,7 @@ jobs:
         if: success()
         env:
           PDM_PUBLISH_USERNAME: __token__
-          PDM_PUBLISH_PASSWORD: ${{ secrets.PDM_PUBLISH_PASSWORD }}
+          PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           cd py/gptcomet
           pdm version ${{ env.VERSION }}
