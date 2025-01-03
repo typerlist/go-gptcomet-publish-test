@@ -130,8 +130,5 @@ jobs:
           PDM_PUBLISH_USERNAME: __token__
           PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          cd py/gptcomet
-          pdm version ${{ env.VERSION }}
-          # 为特定平台构建并发布
           pdm build --platform ${{ env.PLATFORM }}
           pdm publish --repository pypi-test --no-verify
