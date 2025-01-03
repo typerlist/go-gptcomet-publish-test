@@ -36,21 +36,26 @@ jobs:
 
   python-package:
     needs: goreleaser
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
-          - os: linux
-            arch: x86_64
-          - os: linux
-            arch: arm64
-          - os: darwin
-            arch: x86_64
-          - os: darwin
-            arch: arm64
           - os: windows
             arch: x86_64
+          - os: macos-13
+            platform: macos
+            arch: amd64
+          - os: macos-14
+            platform: macos
+            arch: arm64
+          - os: ubuntu-latest
+            platform: linux
+            arch: amd64
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+            qemu: true
 
     steps:
       - uses: actions/checkout@v3
@@ -71,18 +76,29 @@ jobs:
         shell: bash
         run: |
           echo "Downloading release binary for OS=${{ matrix.os }} ARCH=${{ matrix.arch }}"
-          # Convert arch name for asset download
-          if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
-            BINARY_ARCH="amd64"
-          else
-            BINARY_ARCH="arm64"
-          fi
+          
+          # Set asset OS name
+          case "${{ matrix.os }}" in
+            ubuntu-latest)
+              ASSET_OS="linux"
+              ;;
+            macos-*)
+              ASSET_OS="darwin"
+              ;;
+            windows)
+              ASSET_OS="windows"
+              ;;
+          esac
 
+          # Set binary architecture
+          BINARY_ARCH="${{ matrix.arch }}"
+          
+          # Set archive format and extract command
           if [[ "${{ matrix.os }}" == "windows" ]]; then
-            ASSET_NAME="gptcomet_${{ env.VERSION }}_${{ matrix.os }}_${BINARY_ARCH}.zip"
+            ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${BINARY_ARCH}.zip"
             EXTRACT_CMD="unzip -o"
           else
-            ASSET_NAME="gptcomet_${{ env.VERSION }}_${{ matrix.os }}_${BINARY_ARCH}.tar.gz"
+            ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${BINARY_ARCH}.tar.gz"
             EXTRACT_CMD="tar xzf"
           fi
           
@@ -111,24 +127,22 @@ jobs:
           ls -alh py/gptcomet/bin
           
           # Set platform tag for wheel
-          platform=""
-          if [[ "${{ matrix.os }}" == "linux" ]]; then
-            if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
-              platform="linux_x86_64"
+          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
+            if [[ "${{ matrix.arch }}" == "amd64" ]]; then
+              PLATFORM="manylinux_2_39_x86_64"
             else
-              platform="linux_aarch64"
+              PLATFORM="manylinux_2_39_aarch64"
             fi
           elif [[ "${{ matrix.os }}" == "windows" ]]; then
-            platform="win_amd64"
-          elif [[ "${{ matrix.os }}" == "darwin" ]]; then
-            if [[ "${{ matrix.arch }}" == "x86_64" ]]; then
-              platform="macos_x86_64"
-            else
-              platform="macos_arm64"
-            fi
+            PLATFORM="win_amd64"
+          elif [[ "${{ matrix.os }}" == "macos-13" ]]; then
+            PLATFORM="macosx_10_15_x86_64"
+          elif [[ "${{ matrix.os }}" == "macos-14" ]]; then
+            PLATFORM="macosx_11_0_arm64"
           fi
-          echo "PLATFORM=${platform}" >> $GITHUB_ENV
-          echo "Set PLATFORM=${platform}"
+          
+          echo "PLATFORM=${PLATFORM}" >> $GITHUB_ENV
+          echo "Set PLATFORM=${PLATFORM}"
           ls -alh
       
       - name: Install dependencies
@@ -140,18 +154,16 @@ jobs:
       
       - name: Build package
         run: |
-          echo "Building package with pdm"
+          echo "Building package on ${{ matrix.os }} with arch ${{ matrix.arch }}"
           pdm build --no-sdist
-          ls -alh dist
-      
+          echo "Built packages:"
+          ls -lh dist/
+
       - name: Publish to PyPI
+        if: success()
         env:
           PDM_PUBLISH_USERNAME: __token__
           PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          echo "Publishing to PyPI"
-          echo "PDM_PUBLISH_USERNAME=${{ secrets.PYPI_API_TOKEN }}"
-          echo ">>>>>"
-          echo $PYPI_API_TOKEN
-          ls -alh dist
-          pdm publish --repository testpypi --no-build
+          echo "Publishing packages built on ${{ matrix.os }} with arch ${{ matrix.arch }}"
+          pdm publish -r testpypi --no-build
