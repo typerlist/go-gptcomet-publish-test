@@ -133,20 +133,20 @@ jobs:
         run: |
           echo "Installing dependencies"
           python -m pip install --upgrade pip
-          pip install cibuildwheel==2.10.0 twine
-          ls -alh
+          pip install pdm
+          pdm --version
       
       - name: Build package
         run: |
-          echo "Building package with cibuildwheel"
-          CIBW_REPAIR_WHEEL_COMMAND="echo 'Skipping auditwheel repair' && mkdir -p /output && echo 'No files to move'" cibuildwheel --output-dir dist
+          echo "Building package with pdm"
+          pdm build
           ls -alh dist
       
       - name: Publish to PyPI
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          PDM_PUBLISH_USERNAME: __token__
+          PDM_PUBLISH_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           echo "Publishing to PyPI"
           ls -alh dist
-          twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+          pdm publish --repository testpypi --no-build --no-verify dist/*
