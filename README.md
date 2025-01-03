@@ -144,6 +144,10 @@ Provider silicon already has a configuration. Do you want to overwrite it? (y/N)
 Provider silicon configured successfully!
 ```
 
+Example:
+
+![](artwork/newprovider.gif)
+
 ## Usage
 
 ### Basic Usage
