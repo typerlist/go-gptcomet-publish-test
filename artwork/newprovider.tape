@@ -6,8 +6,8 @@ Require go
 Set Shell "zsh"
 Set CursorBlink false
 Set FontSize 32
-Set Width 1500
-Set Height 1100
+Set Width 2000
+Set Height 1000
 Set TypingSpeed 0.2
 
 Set Shell zsh
