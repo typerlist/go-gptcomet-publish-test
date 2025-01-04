@@ -137,11 +137,6 @@ jobs:
           fi
           ls -alh py/gptcomet/bin
           
-          # Set platform tag for wheel
-          if (${{ matrix.os }} -eq "windows") {
-            $PLATFORM = "win_amd64"
-          }
-          
           echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
           echo "Set PLATFORM=$PLATFORM"
           ls
