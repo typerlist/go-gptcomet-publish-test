@@ -110,11 +110,7 @@ jobs:
           # Download and extract
           http get $asset_url | save -f binary.archive
           
-          if $os.extract == 'tar' {
-            tar -xzf binary.archive
-          } else {
-            expand-archive -path binary.archive -destinationpath .
-          }
+          tar -xzf binary.archive
           
           # Move binary to appropriate location
           if $os.name == 'windows' {
