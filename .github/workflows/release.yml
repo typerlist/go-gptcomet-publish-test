@@ -66,12 +66,25 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set version
+      - name: Set version (Unix)
+        if: matrix.os != 'windows-latest'
+        shell: bash
         run: |
           echo "PACKAGE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
           echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
           echo "Set PACKAGE_VERSION=${GITHUB_REF#refs/tags/} and VERSION=${GITHUB_REF#refs/tags/v}"
           ls -alh
+
+      - name: Set version (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $PACKAGE_VERSION = $env:GITHUB_REF -replace 'refs/tags/',''
+          $VERSION = $env:GITHUB_REF -replace 'refs/tags/v',''
+          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $env:GITHUB_ENV
+          echo "VERSION=$VERSION" >> $env:GITHUB_ENV
+          echo "Set PACKAGE_VERSION=$PACKAGE_VERSION and VERSION=$VERSION"
+          Get-ChildItem
       
       - name: Download release binary (Unix)
         if: matrix.os != 'windows-latest'
@@ -105,7 +118,7 @@ jobs:
           ls -alh py/gptcomet/bin
 
       - name: Download release binary (Windows)
-        if: matrix.os == 'windows'
+        if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           echo "Downloading release binary for Windows ARCH=${{ matrix.arch }}"
@@ -118,7 +131,7 @@ jobs:
           mkdir -p py/gptcomet/bin
           Expand-Archive -Path binary.archive -DestinationPath .
           mv gptcomet.exe "py/gptcomet/bin/gptcomet_${{ matrix.arch }}.exe"
-          ls -alh py/gptcomet/bin
+          ls py/gptcomet/bin
           
           # Set platform tag for wheel
           if (${{ matrix.os }} -eq "windows") {
@@ -127,7 +140,7 @@ jobs:
           
           echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
           echo "Set PLATFORM=$PLATFORM"
-          ls -alh
+          ls
       
       - name: Install dependencies
         run: |
@@ -140,7 +153,7 @@ jobs:
         run: |
           echo "Building package on ${{ matrix.os }} with arch ${{ matrix.arch }}"
           pdm build --no-sdist
-          ls -lh dist/
+          ls dist/
 
       - name: Publish to PyPI
         if: success()
@@ -154,7 +167,7 @@ jobs:
             echo "Attempt $i to publish package"
             if pdm publish -r testpypi --no-build; then
               echo "Publish succeeded on attempt $i"
-              exit 0  # 成功时退出
+              exit 0
             else
               echo "Publish failed on attempt $i"
               sleep 10
