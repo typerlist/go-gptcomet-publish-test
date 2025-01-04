@@ -41,22 +41,22 @@ jobs:
       matrix:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
-          - os: windows
+          - os: 	windows-latest
             arch: x86_64
-          - os: macos-11
+          - os: macos-13
             platform: macos
             arch: amd64
           - os: macos-14
             platform: macos
             arch: arm64
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             platform: linux
             arch: amd64
-          - os: ubuntu-18.04
+          - os: ubuntu-20.04
             platform: linux
             arch: arm64
             qemu: true
-        os: [windows, macos-11, macos-14, ubuntu-18.04]
+        os: [windows-latest, macos-13, macos-14, ubuntu-20.04]
 
     steps:
       - uses: actions/checkout@v3
@@ -74,14 +74,14 @@ jobs:
           ls -alh
       
       - name: Download release binary (Unix)
-        if: matrix.os != 'windows'
+        if: matrix.os != 'windows-latest'
         shell: bash
         run: |
           echo "Downloading release binary for OS=${{ matrix.os }} ARCH=${{ matrix.arch }}"
           
           # Set asset OS name
           case "${{ matrix.os }}" in
-            ubuntu-18.04)
+            ubuntu-20.04)
               ASSET_OS="linux"
               ;;
             macos-*)
