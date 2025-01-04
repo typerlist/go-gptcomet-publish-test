@@ -42,7 +42,7 @@ jobs:
         python-version: ["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]
         include:
           - os: windows-latest
-            arch: x86_64
+            arch: amd64
           - os: macos-13
             platform: macos
             arch: amd64
@@ -95,9 +95,11 @@ jobs:
             {name: 'linux', ext: 'tar.gz', extract: 'tar', bin_suffix: 'linux'}
           }
           
-          # Map architecture names
-          let arch = if $env.MATRIX_ARCH == 'x86_64' {
+          # Map architecture names - always use amd64 or arm64
+          let arch = if $env.MATRIX_ARCH in ['x86_64', 'amd64'] {
             'amd64'
+          } else if $env.MATRIX_ARCH in ['arm64', 'aarch64'] {
+            'arm64'
           } else {
             $env.MATRIX_ARCH
           }
@@ -112,13 +114,13 @@ jobs:
           
           tar -xzf binary.archive
           
-          # Move binary to appropriate location
+          # Move binary to appropriate location - use arch consistently
           if $os.name == 'windows' {
-            mv gptcomet.exe "py/gptcomet/bin/gptcomet_x86_64.exe"
+            mv gptcomet.exe $"py/gptcomet/bin/gptcomet_($arch).exe"
           } else if $os.name == 'darwin' {
-            mv gptcomet $"py/gptcomet/bin/gptcomet_($env.MATRIX_ARCH)_mac"
+            mv gptcomet $"py/gptcomet/bin/gptcomet_($arch)_mac"
           } else {
-            mv gptcomet $"py/gptcomet/bin/gptcomet_($env.MATRIX_ARCH)_linux"
+            mv gptcomet $"py/gptcomet/bin/gptcomet_($arch)_linux"
           }
           
           # Set platform tag for wheel

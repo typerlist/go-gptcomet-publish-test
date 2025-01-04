@@ -9,9 +9,9 @@ def find_gptcomet_binary():
     
     machine = platform.machine().lower()
     if machine in ('arm64', 'aarch64', 'arm'):
-        arch = 'arm'
+        arch = 'arm64'
     elif machine in ('x86_64', 'amd64', 'x64', 'i386', 'x86'):
-        arch = 'x86_64'
+        arch = 'amd64'
     else:
         raise OSError(f"Unsupported architecture: {machine}")
     
