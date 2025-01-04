@@ -195,4 +195,4 @@ jobs:
           PDM_PUBLISH_TIMEOUT: 300
         run: |
           echo "Publishing to PyPI"
-          pdm publish --no-build -p final_dist/* -r testpypi
+          pdm publish -v --no-build -d final_dist -r testpypi
