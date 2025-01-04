@@ -49,14 +49,14 @@ jobs:
           - os: macos-14
             platform: macos
             arch: arm64
-          - os: ubuntu-latest
+          - os: ubuntu-18.04
             platform: linux
             arch: amd64
-          - os: ubuntu-latest
+          - os: ubuntu-18.04
             platform: linux
             arch: arm64
             qemu: true
-        os: [windows, macos-11, macos-14, ubuntu-latest]
+        os: [windows, macos-11, macos-14, ubuntu-18.04]
 
     steps:
       - uses: actions/checkout@v3
@@ -81,7 +81,7 @@ jobs:
           
           # Set asset OS name
           case "${{ matrix.os }}" in
-            ubuntu-latest)
+            ubuntu-18.04)
               ASSET_OS="linux"
               ;;
             macos-*)
