@@ -1,6 +1,6 @@
 [project]
 name = "gptcomet"
-version = "0.1.7"
+version = "0.0.25"
 description = "GPTComet: AI-Powered Git Commit Message Generator."
 authors = [{ name = "belingud", email = "im.victor@qq.com" }]
 dependencies = []
@@ -60,6 +60,10 @@ platforms = [
     "macos_x86_64",
     "macos_arm64",
 ]
+source-includes = ["LICENSE", "README.md", "pyproject.toml"]
+
+[tool.pdm.build.wheel-data]
+plat-name = {win32 = "win_amd64", linux_x86_64 = "manylinux2014_x86_64", darwin_x86_64 = "macosx_10_9_x86_64", darwin_arm64 = "macosx_11_0_arm64"}
 
 [tool.pdm.scripts]
 bump = "bump2version"
