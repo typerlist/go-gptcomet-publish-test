@@ -162,4 +162,4 @@ jobs:
           PDM_PUBLISH_TIMEOUT: 300
         run: |
           echo "Publishing packages built on ${{ matrix.os }} with arch ${{ matrix.arch }}"
-          pdm publish -r testpypi --no-build
+          pdm publish -v -r testpypi --no-build
