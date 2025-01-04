@@ -66,80 +66,67 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: Set version (Unix)
-        if: matrix.os != 'windows-latest'
-        shell: bash
-        run: |
-          echo "PACKAGE_VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-          echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
-          echo "Set PACKAGE_VERSION=${GITHUB_REF#refs/tags/} and VERSION=${GITHUB_REF#refs/tags/v}"
-          ls -alh
+      - name: Setup Nushell
+        uses: hustcer/setup-nu@v3
+        with:
+          version: '*'
 
-      - name: Set version (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
+      - name: Set version and download binary
+        shell: nu {0}
         run: |
-          $PACKAGE_VERSION = $env:GITHUB_REF -replace 'refs/tags/',''
-          $VERSION = $env:GITHUB_REF -replace 'refs/tags/v',''
-          echo "PACKAGE_VERSION=$PACKAGE_VERSION" >> $env:GITHUB_ENV
-          echo "VERSION=$VERSION" >> $env:GITHUB_ENV
-          echo "Set PACKAGE_VERSION=$PACKAGE_VERSION and VERSION=$VERSION"
-          Get-ChildItem
-      
-      - name: Download release binary (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          Write-Output "Downloading release binary for Windows ARCH=x86_64"
+          # Set version variables
+          let package_version = $env.GITHUB_REF | str replace 'refs/tags/' ''
+          let version = $package_version | str replace 'v' ''
+          $env.PACKAGE_VERSION = $package_version
+          $env.VERSION = $version
           
-          $assetName = "gptcomet_$env:VERSION_windows_x86_64.zip"
-          $assetUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:PACKAGE_VERSION/$assetName"
+          # Determine OS and set asset details
+          let os = if $env.RUNNER_OS == 'Windows' {
+            {name: 'windows', ext: 'zip', extract: 'expand', bin_suffix: 'exe'}
+          } else if $env.RUNNER_OS == 'macOS' {
+            {name: 'darwin', ext: 'tar.gz', extract: 'tar', bin_suffix: 'mac'}
+          } else {
+            {name: 'linux', ext: 'tar.gz', extract: 'tar', bin_suffix: 'linux'}
+          }
           
-          Write-Output "Downloading from $assetUrl"
-          curl -L -o binary.archive $assetUrl
-          Expand-Archive -Path binary.archive -DestinationPath .
-          mv gptcomet.exe "py/gptcomet/bin/gptcomet_x86_64.exe"
-          ls py/gptcomet/bin
+          # Build asset name and URL
+          let asset_name = if $os.name == 'windows' {
+            $'gptcomet_($version)_($os.name)_x86_64.($os.ext)'
+          } else {
+            $'gptcomet_($version)_($os.name)_($env.matrix.arch).($os.ext)'
+          }
+          
+          let asset_url = $'https://github.com/($env.GITHUB_REPOSITORY)/releases/download/($package_version)/($asset_name)'
+          print $'Downloading from ($asset_url)'
+          
+          # Download and extract
+          http get $asset_url | save -f binary.archive
+          
+          if $os.extract == 'tar' {
+            tar -xzf binary.archive
+          } else {
+            expand-archive -path binary.archive -destinationpath .
+          }
+          
+          # Move binary to appropriate location
+          if $os.name == 'windows' {
+            mv gptcomet.exe "py/gptcomet/bin/gptcomet_x86_64.exe"
+          } else if $os.name == 'darwin' {
+            mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_mac"
+          } else {
+            mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_linux"
+          }
           
           # Set platform tag for wheel
-          $PLATFORM = "win_amd64"
-          Write-Output "PLATFORM=$PLATFORM" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          Write-Output "Set PLATFORM=$PLATFORM"
-          ls
-
-      - name: Download release binary (Unix)
-        if: matrix.os != 'windows-latest'
-        shell: bash
-        run: |
-          echo "Downloading release binary for OS=${{ matrix.os }} ARCH=${{ matrix.arch }}"
-          
-          # Set asset OS name
-          case "${{ matrix.os }}" in
-            ubuntu-20.04)
-              ASSET_OS="linux"
-              ;;
-            macos-*)
-              ASSET_OS="darwin"
-              ;;
-          esac
-
-          ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${{ matrix.arch }}.tar.gz"
-          ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.PACKAGE_VERSION }}/${ASSET_NAME}"
-          
-          echo "Downloading from $ASSET_URL"
-          curl -L -o binary.archive $ASSET_URL
-          tar xzf binary.archive
-          
-          if [[ "${{ matrix.os }}" == *"macos"* ]]; then
-            mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_mac"
-          else
-            mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_linux"
-          fi
-          ls -alh py/gptcomet/bin
-          
-          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
-          echo "Set PLATFORM=$PLATFORM"
-          ls
+          let platform = if $os.name == 'windows' {
+            'win_amd64'
+          } else if $os.name == 'darwin' {
+            'macos'
+          } else {
+            'linux'
+          }
+          $env.PLATFORM = $platform
+          print $'Set PLATFORM=$platform'
       
       - name: Install dependencies
         run: |
