@@ -87,7 +87,7 @@ jobs:
           Get-ChildItem
       
       - name: Download release binary (Windows)
-        if: runner.os == 'windows-latest'
+        if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
           Write-Output "Downloading release binary for Windows ARCH=x86_64"
@@ -199,4 +199,4 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           echo "Publishing to PyPI"
-          twine upload --repository-url https://test.pypi.org/legacy/ final_dist/*
+          twine upload --repository-url https://test.pypi.org/legacy/ final_dist/* --verbose
