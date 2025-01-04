@@ -86,6 +86,27 @@ jobs:
           echo "Set PACKAGE_VERSION=$PACKAGE_VERSION and VERSION=$VERSION"
           Get-ChildItem
       
+      - name: Download release binary (Windows)
+        if: runner.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          Write-Output "Downloading release binary for Windows ARCH=x86_64"
+          
+          $assetName = "gptcomet_$env:VERSION_windows_x86_64.zip"
+          $assetUrl = "https://github.com/$env:GITHUB_REPOSITORY/releases/download/$env:PACKAGE_VERSION/$assetName"
+          
+          Write-Output "Downloading from $assetUrl"
+          curl -L -o binary.archive $assetUrl
+          Expand-Archive -Path binary.archive -DestinationPath .
+          mv gptcomet.exe "py/gptcomet/bin/gptcomet_x86_64.exe"
+          ls py/gptcomet/bin
+          
+          # Set platform tag for wheel
+          $PLATFORM = "win_amd64"
+          Write-Output "PLATFORM=$PLATFORM" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Output "Set PLATFORM=$PLATFORM"
+          ls
+
       - name: Download release binary (Unix)
         if: matrix.os != 'windows-latest'
         shell: bash
@@ -101,7 +122,7 @@ jobs:
               ASSET_OS="darwin"
               ;;
           esac
-          
+
           ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${{ matrix.arch }}.tar.gz"
           ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.PACKAGE_VERSION }}/${ASSET_NAME}"
           
@@ -115,21 +136,6 @@ jobs:
             mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_linux"
           fi
           ls -alh py/gptcomet/bin
-
-      - name: Download release binary (Windows)
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          echo "Downloading release binary for Windows ARCH=${{ matrix.arch }}"
-          
-          $assetName = "gptcomet_${{ env.VERSION }}_windows_${{ matrix.arch }}.zip"
-          $assetUrl = "https://github.com/${{ github.repository }}/releases/download/${{ env.PACKAGE_VERSION }}/$assetName"
-          
-          echo "Downloading from $assetUrl"
-          curl -L -o binary.archive $assetUrl
-          Expand-Archive -Path binary.archive -DestinationPath .
-          mv gptcomet.exe "py/gptcomet/bin/gptcomet_${{ matrix.arch }}.exe"
-          ls py/gptcomet/bin
           
           # Set platform tag for wheel
           if (${{ matrix.os }} -eq "windows") {
