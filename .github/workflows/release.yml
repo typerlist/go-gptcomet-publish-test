@@ -73,7 +73,8 @@ jobs:
           echo "Set PACKAGE_VERSION=${GITHUB_REF#refs/tags/} and VERSION=${GITHUB_REF#refs/tags/v}"
           ls -alh
       
-      - name: Download release binary
+      - name: Download release binary (Unix)
+        if: matrix.os != 'windows'
         shell: bash
         run: |
           echo "Downloading release binary for OS=${{ matrix.os }} ARCH=${{ matrix.arch }}"
@@ -86,22 +87,9 @@ jobs:
             macos-*)
               ASSET_OS="darwin"
               ;;
-            windows)
-              ASSET_OS="windows"
-              ;;
           esac
-
-          # Set binary architecture
-          BINARY_ARCH="${{ matrix.arch }}"
           
-          # Set archive format and extract command
-          if [[ "${{ matrix.os }}" == "windows" ]]; then
-            ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${BINARY_ARCH}.zip"
-            EXTRACT_CMD="unzip -o"
-          else
-            ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${BINARY_ARCH}.tar.gz"
-            EXTRACT_CMD="tar xzf"
-          fi
+          ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${{ matrix.arch }}.tar.gz"
           
           echo "ASSET_NAME=${ASSET_NAME}"
           ASSET_URL=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.PACKAGE_VERSION }} | \
@@ -115,35 +103,46 @@ jobs:
           echo "Downloading from $ASSET_URL"
           curl -L -o binary.archive $ASSET_URL
           mkdir -p py/gptcomet/bin
-          echo "Extracting binary.archive using $EXTRACT_CMD"
-          $EXTRACT_CMD binary.archive
-          ls -alh py/gptcomet/bin
-          if [[ "${{ matrix.os }}" == "windows" ]]; then
-            mv gptcomet.exe "py/gptcomet/bin/gptcomet_${{ matrix.arch }}.exe"
-          elif [[ "${{ matrix.os }}" == "darwin" ]]; then
+          tar xzf binary.archive
+          
+          if [[ "${{ matrix.os }}" == *"macos"* ]]; then
             mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_mac"
-          elif [[ "${{ matrix.os }}" == "linux" ]]; then
+          else
             mv gptcomet "py/gptcomet/bin/gptcomet_${{ matrix.arch }}_linux"
           fi
           ls -alh py/gptcomet/bin
+
+      - name: Download release binary (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          echo "Downloading release binary for Windows ARCH=${{ matrix.arch }}"
+          
+          $assetName = "gptcomet_${{ env.VERSION }}_windows_${{ matrix.arch }}.zip"
+          echo "ASSET_NAME=$assetName"
+          
+          $releaseInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.PACKAGE_VERSION }}"
+          $assetUrl = ($releaseInfo.assets | Where-Object { $_.name -eq $assetName }).browser_download_url
+          
+          if (-not $assetUrl) {
+            echo "Error: Could not find asset $assetName"
+            exit 1
+          }
+          
+          echo "Downloading from $assetUrl"
+          curl -L -o binary.archive $assetUrl
+          mkdir -p py/gptcomet/bin
+          Expand-Archive -Path binary.archive -DestinationPath .
+          mv gptcomet.exe "py/gptcomet/bin/gptcomet_${{ matrix.arch }}.exe"
+          ls -alh py/gptcomet/bin
           
           # Set platform tag for wheel
-          if [[ "${{ matrix.os }}" == "ubuntu-latest" ]]; then
-            if [[ "${{ matrix.arch }}" == "amd64" ]]; then
-              PLATFORM="manylinux_2_39_x86_64"
-            else
-              PLATFORM="manylinux_2_39_aarch64"
-            fi
-          elif [[ "${{ matrix.os }}" == "windows" ]]; then
-            PLATFORM="win_amd64"
-          elif [[ "${{ matrix.os }}" == "macos-13" ]]; then
-            PLATFORM="macosx_10_15_x86_64"
-          elif [[ "${{ matrix.os }}" == "macos-14" ]]; then
-            PLATFORM="macosx_11_0_arm64"
-          fi
+          if (${{ matrix.os }} -eq "windows") {
+            $PLATFORM = "win_amd64"
+          }
           
-          echo "PLATFORM=${PLATFORM}" >> $GITHUB_ENV
-          echo "Set PLATFORM=${PLATFORM}"
+          echo "PLATFORM=$PLATFORM" >> $GITHUB_ENV
+          echo "Set PLATFORM=$PLATFORM"
           ls -alh
       
       - name: Install dependencies
@@ -157,7 +156,6 @@ jobs:
         run: |
           echo "Building package on ${{ matrix.os }} with arch ${{ matrix.arch }}"
           pdm build --no-sdist
-          echo "Built packages:"
           ls -lh dist/
 
       - name: Publish to PyPI
