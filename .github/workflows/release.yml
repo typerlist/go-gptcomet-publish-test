@@ -56,6 +56,7 @@ jobs:
             platform: linux
             arch: arm64
             qemu: true
+        os: [windows, macos-13, macos-14, ubuntu-latest]
 
     steps:
       - uses: actions/checkout@v3
