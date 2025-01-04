@@ -93,7 +93,7 @@ jobs:
           
           echo "ASSET_NAME=${ASSET_NAME}"
           ASSET_INFO=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.PACKAGE_VERSION }})
-          echo "html_url=$(echo $ASSET_INFO | jq -r '.html_url')"
+          echo "ASSET_INFO=${ASSET_INFO}"
           ASSET_URL=$(echo $ASSET_INFO | \
             jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')
           
