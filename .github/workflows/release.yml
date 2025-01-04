@@ -90,17 +90,7 @@ jobs:
           esac
           
           ASSET_NAME="gptcomet_${{ env.VERSION }}_${ASSET_OS}_${{ matrix.arch }}.tar.gz"
-          
-          echo "ASSET_NAME=${ASSET_NAME}"
-          ASSET_INFO=$(curl -s https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.PACKAGE_VERSION }})
-          echo "ASSET_INFO=${ASSET_INFO}"
-          ASSET_URL=$(echo $ASSET_INFO | \
-            jq -r --arg name "$ASSET_NAME" '.assets[] | select(.name == $name) | .browser_download_url')
-          
-          if [ -z "$ASSET_URL" ]; then
-            echo "Error: Could not find asset $ASSET_NAME"
-            exit 1
-          fi
+          ASSET_URL="https://github.com/${{ github.repository }}/releases/download/${{ env.PACKAGE_VERSION }}/${ASSET_NAME}"
           
           echo "Downloading from $ASSET_URL"
           curl -L -o binary.archive $ASSET_URL
@@ -121,15 +111,7 @@ jobs:
           echo "Downloading release binary for Windows ARCH=${{ matrix.arch }}"
           
           $assetName = "gptcomet_${{ env.VERSION }}_windows_${{ matrix.arch }}.zip"
-          echo "ASSET_NAME=$assetName"
-          
-          $releaseInfo = Invoke-RestMethod -Uri "https://api.github.com/repos/${{ github.repository }}/releases/tags/${{ env.PACKAGE_VERSION }}"
-          $assetUrl = ($releaseInfo.assets | Where-Object { $_.name -eq $assetName }).browser_download_url
-          
-          if (-not $assetUrl) {
-            echo "Error: Could not find asset $assetName"
-            exit 1
-          }
+          $assetUrl = "https://github.com/${{ github.repository }}/releases/download/${{ env.PACKAGE_VERSION }}/$assetName"
           
           echo "Downloading from $assetUrl"
           curl -L -o binary.archive $assetUrl
