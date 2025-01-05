@@ -32,10 +32,26 @@ jobs:
           version: latest
           args: release --clean
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  
+  check-version:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    outputs:
+      is_prerelease: ${{ steps.check_tag.outputs.is_prerelease }}
+    steps:
+      - name: Check if version is prerelease
+        id: check_tag
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/}
+          if [[ $VERSION =~ .*-.*$ ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
 
   python-package:
-    needs: goreleaser
+    needs: check-version
+    if: needs.check-version.outputs.is_prerelease != 'true'
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -154,7 +170,8 @@ jobs:
           retention-days: 1
 
   publish:
-    needs: python-package
+    needs: [check-version, python-package]
+    if: needs.check-version.outputs.is_prerelease != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
